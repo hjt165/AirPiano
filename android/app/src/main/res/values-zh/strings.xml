@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">空气钢琴</string>
+
+    <string name="media_pipe">MediaPipe</string>
+
+    <string name="alt_bottom_sheet_chevron">底部面板展开指示器</string>
+
+    <string name="alt_bottom_sheet_max_results_button_minus">减少最大识别结果按钮</string>
+    <string name="alt_bottom_sheet_max_results_button_plus">增加最大识别结果按钮</string>
+    <string name="alt_bottom_sheet_threshold_button_minus">降低手势识别阈值按钮</string>
+    <string name="alt_bottom_sheet_threshold_button_plus">提高手势识别阈值按钮</string>
+    <string name="alt_bottom_sheet_thread_button_minus">减少线程数按钮</string>
+    <string name="alt_bottom_sheet_thread_button_plus">增加线程数按钮</string>
+    <string name="menu_camera">相机</string>
+    <string name="menu_gallery">图库</string>
+    <string name="tv_gallery_placeholder">点击 + 添加图片或视频，开始手势识别。</string>
+
+    <string name="label_inference_time">推理时间</string>
+    <string name="label_fps">帧率</string>
+    <string name="label_hand_detection_confidence_threshold">检测阈值</string>
+    <string name="label_hand_tracking_confidence_threshold">追踪阈值</string>
+    <string name="label_hand_presence_confidence_threshold">存在阈值</string>
+    <string name="label_delegate">推理后端</string>
+
+    <string name="hands_not_detected">未检测到手部</string>
+    <string name="permission_granted">权限已授予</string>
+    <string name="permission_denied">权限被拒绝</string>
+    <string name="unsupported_data_type">不支持的数据类型。</string>
+
+    <string-array name="delegate_spinner_titles">
+        <item>CPU</item>
+        <item>GPU</item>
+    </string-array>
+</resources>
