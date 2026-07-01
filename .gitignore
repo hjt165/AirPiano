@@ -13,4 +13,4 @@
 .externalNativeBuild
 .cxx
 local.properties
-*.wav
+# *.wav — allowed for piano audio resources

@@ -2,6 +2,7 @@ package com.google.mediapipe.examples.gesturerecognizer.fragment
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
+import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,16 +14,21 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.Navigation
-import com.google.mediapipe.examples.gesturerecognizer.GestureRecognizerHelper
+import com.google.mediapipe.examples.gesturerecognizer.FingerPressDetector
+import com.google.mediapipe.examples.gesturerecognizer.HandLandmarkerHelper
+import com.google.mediapipe.examples.gesturerecognizer.PianoKeyMapper
+import com.google.mediapipe.examples.gesturerecognizer.PianoSoundPlayer
+import com.google.mediapipe.examples.gesturerecognizer.PianoView
 import com.google.mediapipe.examples.gesturerecognizer.R
 import com.google.mediapipe.examples.gesturerecognizer.databinding.FragmentCameraBinding
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class CameraFragment : Fragment(),
-    GestureRecognizerHelper.GestureRecognizerListener {
+    HandLandmarkerHelper.HandLandmarkerListener {
 
     companion object {
         private const val TAG = "AirPiano"
@@ -32,7 +38,11 @@ class CameraFragment : Fragment(),
     private val fragmentCameraBinding
         get() = _fragmentCameraBinding!!
 
-    private lateinit var gestureRecognizerHelper: GestureRecognizerHelper
+    private lateinit var handLandmarkerHelper: HandLandmarkerHelper
+    private lateinit var fingerPressDetector: FingerPressDetector
+    private lateinit var pianoKeyMapper: PianoKeyMapper
+    private lateinit var pianoSoundPlayer: PianoSoundPlayer
+
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
@@ -40,6 +50,7 @@ class CameraFragment : Fragment(),
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
 
     private lateinit var backgroundExecutor: ExecutorService
+    private var lastActiveKeys: Set<Int> = emptySet()
 
     override fun onResume() {
         super.onResume()
@@ -50,22 +61,28 @@ class CameraFragment : Fragment(),
         }
 
         backgroundExecutor.execute {
-            if (gestureRecognizerHelper.isClosed()) {
-                gestureRecognizerHelper.setupGestureRecognizer()
+            if (handLandmarkerHelper.isClosed()) {
+                handLandmarkerHelper.setupHandLandmarker()
             }
         }
     }
 
     override fun onPause() {
         super.onPause()
-        if (this::gestureRecognizerHelper.isInitialized) {
-            backgroundExecutor.execute { gestureRecognizerHelper.clearGestureRecognizer() }
+        if (this::handLandmarkerHelper.isInitialized) {
+            backgroundExecutor.execute { handLandmarkerHelper.clearHandLandmarker() }
+        }
+        if (this::pianoSoundPlayer.isInitialized) {
+            pianoSoundPlayer.stopAllNotes()
         }
     }
 
     override fun onDestroyView() {
         _fragmentCameraBinding = null
         super.onDestroyView()
+        if (this::pianoSoundPlayer.isInitialized) {
+            pianoSoundPlayer.release()
+        }
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
     }
@@ -86,15 +103,21 @@ class CameraFragment : Fragment(),
 
         backgroundExecutor = Executors.newSingleThreadExecutor()
 
+        fingerPressDetector = FingerPressDetector()
+        pianoKeyMapper = PianoKeyMapper()
+        pianoSoundPlayer = PianoSoundPlayer(requireContext())
+
+        pianoSoundPlayer.initialize()
+
         fragmentCameraBinding.viewFinder.post {
             setUpCamera()
         }
 
         backgroundExecutor.execute {
-            gestureRecognizerHelper = GestureRecognizerHelper(
+            handLandmarkerHelper = HandLandmarkerHelper(
                 context = requireContext(),
                 runningMode = RunningMode.LIVE_STREAM,
-                gestureRecognizerListener = this
+                handLandmarkerListener = this
             )
         }
     }
@@ -147,7 +170,11 @@ class CameraFragment : Fragment(),
     }
 
     private fun recognizeHand(imageProxy: ImageProxy) {
-        gestureRecognizerHelper.recognizeLiveStream(imageProxy = imageProxy)
+        val image = imageProxy.image
+        if (image != null) {
+            handLandmarkerHelper.recognizeLiveStream(image)
+        }
+        imageProxy.close()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -156,11 +183,18 @@ class CameraFragment : Fragment(),
             fragmentCameraBinding.viewFinder.display.rotation
     }
 
-    override fun onResults(resultBundle: GestureRecognizerHelper.ResultBundle) {
+    override fun onResults(resultBundle: HandLandmarkerHelper.ResultBundle) {
         activity?.runOnUiThread {
             if (_fragmentCameraBinding != null) {
+                val result = resultBundle.results
+
+                fragmentCameraBinding.tvInferenceTime.text =
+                    "推理时间: ${resultBundle.inferenceTime}ms"
+
+                processHandResults(result)
+
                 fragmentCameraBinding.overlay.setResults(
-                    resultBundle.results.first(),
+                    result,
                     resultBundle.inputImageHeight,
                     resultBundle.inputImageWidth,
                     RunningMode.LIVE_STREAM
@@ -168,6 +202,46 @@ class CameraFragment : Fragment(),
                 fragmentCameraBinding.overlay.invalidate()
             }
         }
+    }
+
+    private fun processHandResults(result: HandLandmarkerResult) {
+        val pressedFingers = fingerPressDetector.detectPress(result)
+        val fingertipPositions = fingerPressDetector.getFingertipPositions(result)
+
+        val activeKeys = mutableSetOf<String>()
+        val activeKeyIndices = mutableSetOf<Int>()
+
+        for (i in fingertipPositions.indices) {
+            if (i in pressedFingers) {
+                val (keyIndex, noteName) = pianoKeyMapper.mapFingerToKey(
+                    fingertipPositions[i].first,
+                    fingertipPositions[i].second,
+                    pressedFingers
+                )
+                if (keyIndex >= 0 && noteName.isNotEmpty()) {
+                    activeKeys.add(noteName)
+                    activeKeyIndices.add(keyIndex)
+                }
+            }
+        }
+
+        val currentNote = if (activeKeys.isNotEmpty()) activeKeys.first() else "--"
+        fragmentCameraBinding.tvCurrentNote.text = "当前音符: $currentNote"
+
+        fragmentCameraBinding.pianoView.setPressedKeys(activeKeyIndices)
+        fragmentCameraBinding.pianoView.setCurrentNote(currentNote)
+
+        for (note in activeKeys) {
+            pianoSoundPlayer.playNote(note)
+        }
+
+        for (note in lastActiveKeys) {
+            if (note !in activeKeys) {
+                pianoSoundPlayer.stopNote(note)
+            }
+        }
+
+        lastActiveKeys = activeKeys
     }
 
     override fun onError(error: String, errorCode: Int) {
