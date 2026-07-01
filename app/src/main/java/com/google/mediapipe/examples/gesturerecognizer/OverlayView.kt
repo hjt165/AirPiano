@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -276,6 +277,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
             val tipX = landmarkToViewX(tip.x())
             val tipY = landmarkToViewY(tip.y())
 
+            Log.d(TAG, "Finger tip $tipIdx: normalized(${tip.x()}, ${tip.y()}) -> view($tipX, $tipY), pianoTop=${if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].top else 0}, pianoBottom=${if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom else 0}")
+
             // Check black keys first (they're on top)
             var hitBlack = false
             for (i in blackKeyRects.indices) {
@@ -364,6 +367,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     }
 
     companion object {
+        private const val TAG = "OverlayView"
         private const val LANDMARK_STROKE_WIDTH = 8F
     }
 }

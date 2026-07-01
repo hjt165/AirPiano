@@ -235,6 +235,11 @@ class CameraFragment : Fragment(),
                 )
                 fragmentCameraBinding.overlay.invalidate()
 
+                val landmarkCount = if (result.landmarks().isNotEmpty()) result.landmarks()[0].size else 0
+                if (landmarkCount > 0) {
+                    Log.d(TAG, "Hand detected: $landmarkCount landmarks, image: ${resultBundle.inputImageWidth}x${resultBundle.inputImageHeight}")
+                }
+
                 processNotes()
             }
         }

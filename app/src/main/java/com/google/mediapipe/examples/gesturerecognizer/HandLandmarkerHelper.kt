@@ -95,7 +95,6 @@ class HandLandmarkerHelper(
         val image = imageProxy.image!!
         val plane = image.planes[0]
         val buffer = plane.buffer
-        val pixelStride = plane.pixelStride
         val rowStride = plane.rowStride
 
         val bitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
@@ -105,11 +104,10 @@ class HandLandmarkerHelper(
         for (row in 0 until image.height) {
             buffer.position(row * rowStride)
             for (col in 0 until image.width) {
-                val byteIndex = col * pixelStride
-                val r = buffer.get(byteIndex).toInt() and 0xFF
-                val g = buffer.get(byteIndex + 1).toInt() and 0xFF
-                val b = buffer.get(byteIndex + 2).toInt() and 0xFF
-                val a = buffer.get(byteIndex + 3).toInt() and 0xFF
+                val r = buffer.get().toInt() and 0xFF
+                val g = buffer.get().toInt() and 0xFF
+                val b = buffer.get().toInt() and 0xFF
+                val a = buffer.get().toInt() and 0xFF
                 pixels[row * image.width + col] = (a shl 24) or (r shl 16) or (g shl 8) or b
             }
         }
