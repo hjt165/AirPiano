@@ -2,7 +2,6 @@ package com.google.mediapipe.examples.gesturerecognizer.fragment
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
-import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -51,7 +50,7 @@ class CameraFragment : Fragment(),
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
 
     private lateinit var backgroundExecutor: ExecutorService
-    private var lastActiveKeys: Set<Int> = emptySet()
+    private var lastActiveKeys: Set<String> = emptySet()
 
     private var currentDetectionThreshold = 0.50f
     private var currentTrackingThreshold = 0.50f
@@ -259,10 +258,10 @@ class CameraFragment : Fragment(),
 
         for (i in fingertipPositions.indices) {
             if (i in pressedFingers) {
+                val fingerX = fingertipPositions[i].first
+                val fingerY = fingertipPositions[i].second
                 val (keyIndex, noteName) = pianoKeyMapper.mapFingerToKey(
-                    fingertipPositions[i].first,
-                    fingertipPositions[i].second,
-                    pressedFingers
+                    fingerX, fingerY, pressedFingers
                 )
                 if (keyIndex >= 0 && noteName.isNotEmpty()) {
                     activeKeys.add(noteName)

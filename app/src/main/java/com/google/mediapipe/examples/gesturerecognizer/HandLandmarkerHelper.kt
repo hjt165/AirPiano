@@ -1,17 +1,13 @@
 package com.google.mediapipe.examples.gesturerecognizer
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.core.TaskResultCallback
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
-import java.io.File
-import java.io.FileOutputStream
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 class HandLandmarkerHelper(
     var currentDelegate: Int = DELEGATE_CPU,
@@ -35,13 +31,12 @@ class HandLandmarkerHelper(
             val baseOptionsBuilder = BaseOptions.builder()
                 .setModelAssetPath(currentModel)
 
-            if (currentDelegate == DELEGATE_GPU) {
+            val delegate = if (currentDelegate == DELEGATE_GPU) {
                 BaseOptions.Delegate.GPU
             } else {
                 BaseOptions.Delegate.CPU
-            }.let { delegate ->
-                baseOptionsBuilder.setDelegate(delegate)
             }
+            baseOptionsBuilder.setDelegate(delegate)
 
             val optionsBuilder = HandLandmarker.HandLandmarkerOptions.builder()
                 .setBaseOptions(baseOptionsBuilder.build())
@@ -51,20 +46,19 @@ class HandLandmarkerHelper(
                 .setNumHands(1)
 
             if (runningMode == RunningMode.LIVE_STREAM) {
-                optionsBuilder
-                    .setRunningMode(RunningMode.LIVE_STREAM)
-                    .setResultListener { result, inputImage ->
-                        val finishTimeMs = System.currentTimeMillis()
-                        val latencyMs = finishTimeMs - result.timestampMs()
-                        handLandmarkerListener?.onResults(
-                            ResultBundle(
-                                result,
-                                inputImage.height,
-                                inputImage.width,
-                                latencyMs
-                            )
+                optionsBuilder.setRunningMode(RunningMode.LIVE_STREAM)
+                optionsBuilder.setResultListener { result, inputImage ->
+                    val finishTimeMs = System.currentTimeMillis()
+                    val latencyMs = finishTimeMs - result.timestampMs()
+                    handLandmarkerListener?.onResults(
+                        ResultBundle(
+                            result,
+                            inputImage.height,
+                            inputImage.width,
+                            latencyMs
                         )
-                    }
+                    )
+                }
             }
 
             handLandmarker = HandLandmarker.createFromOptions(context, optionsBuilder.build())
@@ -81,7 +75,7 @@ class HandLandmarkerHelper(
         }
     }
 
-    fun recognizeLiveStream(imageProxy: android.media.Image) {
+    fun recognizeLiveStream(image: android.media.Image) {
         if (runningMode != RunningMode.LIVE_STREAM) {
             throw IllegalArgumentException(
                 "Attempting to call HandLandmarker while in the wrong running mode: $runningMode"
@@ -90,11 +84,11 @@ class HandLandmarkerHelper(
 
         val frameTimeMs = System.currentTimeMillis()
 
-        val bitmap = android.graphics.Bitmap.createBitmap(
-            imageProxy.width, imageProxy.height,
-            android.graphics.Bitmap.Config.ARGB_8888
+        val bitmap = Bitmap.createBitmap(
+            image.width, image.height,
+            Bitmap.Config.ARGB_8888
         )
-        bitmap.copyPixelsFromBuffer(imageProxy.planes[0].buffer)
+        bitmap.copyPixelsFromBuffer(image.planes[0].buffer)
 
         val mpImage = BitmapImageBuilder(bitmap).build()
         handLandmarker?.detectAsync(mpImage, frameTimeMs)
