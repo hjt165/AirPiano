@@ -1,84 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@android:color/black">
 
-    <!-- Top: Camera preview + overlay (75% weight) -->
-    <FrameLayout
+    <androidx.camera.view.PreviewView
+        android:id="@+id/view_finder"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="75">
+        android:layout_height="match_parent"
+        app:scaleType="fillCenter" />
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/view_finder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:scaleType="fillStart" />
-
-        <com.google.mediapipe.examples.gesturerecognizer.OverlayView
-            android:id="@+id/overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <!-- Settings button -->
-        <ImageButton
-            android:id="@+id/btn_settings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="8dp"
-            android:src="@android:drawable/ic_menu_manage"
-            android:background="@android:color/transparent"
-            android:contentDescription="设置"
-            android:tint="#AAAAAA" />
-    </FrameLayout>
-
-    <!-- Bottom: Info bar + piano (25% weight) -->
-    <LinearLayout
+    <com.google.mediapipe.examples.gesturerecognizer.OverlayView
+        android:id="@+id/overlay"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="25"
-        android:orientation="vertical"
-        android:background="#1A1A1A">
+        android:layout_height="match_parent" />
 
-        <!-- Info bar: inference time + current note -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
-            android:background="#222222">
+    <ImageButton
+        android:id="@+id/btn_settings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_menu_manage"
+        android:background="@android:color/transparent"
+        android:contentDescription="设置"
+        android:tint="#AAAAAA" />
 
-            <TextView
-                android:id="@+id/tv_inference_time"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="推理时间: --"
-                android:textColor="#AAAAAA"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/tv_current_note"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="当前音符: --"
-                android:textColor="#00BFA5"
-                android:textSize="12sp"
-                android:textAlignment="textEnd" />
-        </LinearLayout>
-
-        <!-- PianoView -->
-        <com.google.mediapipe.examples.gesturerecognizer.PianoView
-            android:id="@+id/piano_view"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-    </LinearLayout>
-</LinearLayout>
+</FrameLayout>

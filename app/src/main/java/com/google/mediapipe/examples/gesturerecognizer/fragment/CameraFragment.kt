@@ -13,9 +13,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.Navigation
-import com.google.mediapipe.examples.gesturerecognizer.FingerPressDetector
 import com.google.mediapipe.examples.gesturerecognizer.HandLandmarkerHelper
-import com.google.mediapipe.examples.gesturerecognizer.PianoKeyMapper
 import com.google.mediapipe.examples.gesturerecognizer.PianoSoundPlayer
 import com.google.mediapipe.examples.gesturerecognizer.R
 import com.google.mediapipe.examples.gesturerecognizer.SettingsDialogFragment
@@ -39,8 +37,6 @@ class CameraFragment : Fragment(),
         get() = _fragmentCameraBinding!!
 
     private lateinit var handLandmarkerHelper: HandLandmarkerHelper
-    private lateinit var fingerPressDetector: FingerPressDetector
-    private lateinit var pianoKeyMapper: PianoKeyMapper
     private lateinit var pianoSoundPlayer: PianoSoundPlayer
 
     private var preview: Preview? = null
@@ -50,11 +46,11 @@ class CameraFragment : Fragment(),
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
 
     private lateinit var backgroundExecutor: ExecutorService
-    private var lastActiveKeys: Set<String> = emptySet()
+    private var lastActiveNotes: List<String> = emptyList()
 
     private var currentDetectionThreshold = 0.50f
     private var currentTrackingThreshold = 0.50f
-    private var currentPressThreshold = FingerPressDetector.DEFAULT_PRESS_THRESHOLD
+    private var currentPressThreshold = 0.07f
     private var currentDelegate = 0
 
     override fun onResume() {
@@ -108,10 +104,7 @@ class CameraFragment : Fragment(),
 
         backgroundExecutor = Executors.newSingleThreadExecutor()
 
-        fingerPressDetector = FingerPressDetector()
-        pianoKeyMapper = PianoKeyMapper()
         pianoSoundPlayer = PianoSoundPlayer(requireContext())
-
         pianoSoundPlayer.initialize()
 
         fragmentCameraBinding.viewFinder.post {
@@ -154,8 +147,6 @@ class CameraFragment : Fragment(),
         currentPressThreshold = pressThreshold
         currentDelegate = delegate
 
-        fingerPressDetector.setThreshold(pressThreshold)
-
         backgroundExecutor.execute {
             if (this::handLandmarkerHelper.isInitialized) {
                 handLandmarkerHelper.minHandDetectionConfidence = detectionThreshold
@@ -197,8 +188,8 @@ class CameraFragment : Fragment(),
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
-                    it.setAnalyzer(backgroundExecutor) { image ->
-                        recognizeHand(image)
+                    it.setAnalyzer(backgroundExecutor) { imageProxy ->
+                        recognizeHand(imageProxy)
                     }
                 }
 
@@ -215,11 +206,11 @@ class CameraFragment : Fragment(),
     }
 
     private fun recognizeHand(imageProxy: ImageProxy) {
-        val image = imageProxy.image
-        if (image != null) {
-            handLandmarkerHelper.recognizeLiveStream(image)
+        try {
+            handLandmarkerHelper.recognizeLiveStream(imageProxy)
+        } finally {
+            imageProxy.close()
         }
-        imageProxy.close()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -233,60 +224,40 @@ class CameraFragment : Fragment(),
             if (_fragmentCameraBinding != null) {
                 val result = resultBundle.results
 
-                fragmentCameraBinding.tvInferenceTime.text =
-                    "推理时间: ${resultBundle.inferenceTime}ms"
-
-                processHandResults(result)
+                fragmentCameraBinding.overlay.setInferenceTime(resultBundle.inferenceTime)
 
                 fragmentCameraBinding.overlay.setResults(
                     result,
                     resultBundle.inputImageHeight,
                     resultBundle.inputImageWidth,
-                    RunningMode.LIVE_STREAM
+                    RunningMode.LIVE_STREAM,
+                    frontCamera = (cameraFacing == CameraSelector.LENS_FACING_FRONT)
                 )
                 fragmentCameraBinding.overlay.invalidate()
+
+                processNotes()
             }
         }
     }
 
-    private fun processHandResults(result: HandLandmarkerResult) {
-        val pressedFingers = fingerPressDetector.detectPress(result)
-        val fingertipPositions = fingerPressDetector.getFingertipPositions(result)
+    private fun processNotes() {
+        val currentNotes = fragmentCameraBinding.overlay.getPressedNotes()
+        val currentNoteStr = if (currentNotes.isNotEmpty()) currentNotes.first() else "--"
+        fragmentCameraBinding.overlay.setCurrentNote(currentNoteStr)
 
-        val activeKeys = mutableSetOf<String>()
-        val activeKeyIndices = mutableSetOf<Int>()
-
-        for (i in fingertipPositions.indices) {
-            if (i in pressedFingers) {
-                val fingerX = fingertipPositions[i].first
-                val fingerY = fingertipPositions[i].second
-                val (keyIndex, noteName) = pianoKeyMapper.mapFingerToKey(
-                    fingerX, fingerY, pressedFingers
-                )
-                if (keyIndex >= 0 && noteName.isNotEmpty()) {
-                    activeKeys.add(noteName)
-                    activeKeyIndices.add(keyIndex)
-                }
-            }
-        }
-
-        val currentNote = if (activeKeys.isNotEmpty()) activeKeys.first() else "--"
-        fragmentCameraBinding.tvCurrentNote.text = "当前音符: $currentNote"
-
-        fragmentCameraBinding.pianoView.setPressedKeys(activeKeyIndices)
-        fragmentCameraBinding.pianoView.setCurrentNote(currentNote)
-
-        for (note in activeKeys) {
-            pianoSoundPlayer.playNote(note)
-        }
-
-        for (note in lastActiveKeys) {
-            if (note !in activeKeys) {
+        // Stop notes that are no longer pressed
+        for (note in lastActiveNotes) {
+            if (note !in currentNotes) {
                 pianoSoundPlayer.stopNote(note)
             }
         }
 
-        lastActiveKeys = activeKeys
+        // Play newly pressed notes
+        for (note in currentNotes) {
+            pianoSoundPlayer.playNote(note)
+        }
+
+        lastActiveNotes = currentNotes
     }
 
     override fun onError(error: String, errorCode: Int) {

@@ -3,6 +3,7 @@ package com.google.mediapipe.examples.gesturerecognizer
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -77,7 +78,7 @@ class HandLandmarkerHelper(
         }
     }
 
-    fun recognizeLiveStream(image: android.media.Image) {
+    fun recognizeLiveStream(imageProxy: ImageProxy) {
         if (runningMode != RunningMode.LIVE_STREAM) {
             throw IllegalArgumentException(
                 "Attempting to call HandLandmarker while in the wrong running mode: $runningMode"
@@ -85,15 +86,36 @@ class HandLandmarkerHelper(
         }
 
         val frameTimeMs = System.currentTimeMillis()
-
-        val bitmap = Bitmap.createBitmap(
-            image.width, image.height,
-            Bitmap.Config.ARGB_8888
-        )
-        bitmap.copyPixelsFromBuffer(image.planes[0].buffer)
-
+        val bitmap = imageProxyToBitmap(imageProxy)
         val mpImage = BitmapImageBuilder(bitmap).build()
         handLandmarker?.detectAsync(mpImage, frameTimeMs)
+    }
+
+    private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap {
+        val image = imageProxy.image!!
+        val plane = image.planes[0]
+        val buffer = plane.buffer
+        val pixelStride = plane.pixelStride
+        val rowStride = plane.rowStride
+
+        val bitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(image.width * image.height)
+        buffer.rewind()
+
+        for (row in 0 until image.height) {
+            buffer.position(row * rowStride)
+            for (col in 0 until image.width) {
+                val byteIndex = col * pixelStride
+                val r = buffer.get(byteIndex).toInt() and 0xFF
+                val g = buffer.get(byteIndex + 1).toInt() and 0xFF
+                val b = buffer.get(byteIndex + 2).toInt() and 0xFF
+                val a = buffer.get(byteIndex + 3).toInt() and 0xFF
+                pixels[row * image.width + col] = (a shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+
+        bitmap.setPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
+        return bitmap
     }
 
     fun isClosed(): Boolean = handLandmarker == null
