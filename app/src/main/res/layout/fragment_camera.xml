@@ -22,6 +22,18 @@
             android:id="@+id/overlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+
+        <!-- Settings button -->
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="8dp"
+            android:src="@android:drawable/ic_menu_manage"
+            android:background="@android:color/transparent"
+            android:contentDescription="设置"
+            android:tint="#AAAAAA" />
     </FrameLayout>
 
     <!-- Bottom: Info bar + piano (25% weight) -->

@@ -18,8 +18,8 @@ import com.google.mediapipe.examples.gesturerecognizer.FingerPressDetector
 import com.google.mediapipe.examples.gesturerecognizer.HandLandmarkerHelper
 import com.google.mediapipe.examples.gesturerecognizer.PianoKeyMapper
 import com.google.mediapipe.examples.gesturerecognizer.PianoSoundPlayer
-import com.google.mediapipe.examples.gesturerecognizer.PianoView
 import com.google.mediapipe.examples.gesturerecognizer.R
+import com.google.mediapipe.examples.gesturerecognizer.SettingsDialogFragment
 import com.google.mediapipe.examples.gesturerecognizer.databinding.FragmentCameraBinding
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
@@ -28,7 +28,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class CameraFragment : Fragment(),
-    HandLandmarkerHelper.HandLandmarkerListener {
+    HandLandmarkerHelper.HandLandmarkerListener,
+    SettingsDialogFragment.SettingsListener {
 
     companion object {
         private const val TAG = "AirPiano"
@@ -51,6 +52,11 @@ class CameraFragment : Fragment(),
 
     private lateinit var backgroundExecutor: ExecutorService
     private var lastActiveKeys: Set<Int> = emptySet()
+
+    private var currentDetectionThreshold = 0.50f
+    private var currentTrackingThreshold = 0.50f
+    private var currentPressThreshold = FingerPressDetector.DEFAULT_PRESS_THRESHOLD
+    private var currentDelegate = 0
 
     override fun onResume() {
         super.onResume()
@@ -113,12 +119,52 @@ class CameraFragment : Fragment(),
             setUpCamera()
         }
 
+        fragmentCameraBinding.btnSettings.setOnClickListener {
+            showSettingsDialog()
+        }
+
         backgroundExecutor.execute {
             handLandmarkerHelper = HandLandmarkerHelper(
                 context = requireContext(),
                 runningMode = RunningMode.LIVE_STREAM,
                 handLandmarkerListener = this
             )
+        }
+    }
+
+    private fun showSettingsDialog() {
+        val dialog = SettingsDialogFragment()
+        dialog.setCurrentSettings(
+            currentDetectionThreshold,
+            currentTrackingThreshold,
+            currentPressThreshold,
+            currentDelegate
+        )
+        dialog.setSettingsListener(this)
+        dialog.show(childFragmentManager, SettingsDialogFragment.TAG)
+    }
+
+    override fun onSettingsApplied(
+        detectionThreshold: Float,
+        trackingThreshold: Float,
+        pressThreshold: Float,
+        delegate: Int
+    ) {
+        currentDetectionThreshold = detectionThreshold
+        currentTrackingThreshold = trackingThreshold
+        currentPressThreshold = pressThreshold
+        currentDelegate = delegate
+
+        fingerPressDetector.setThreshold(pressThreshold)
+
+        backgroundExecutor.execute {
+            if (this::handLandmarkerHelper.isInitialized) {
+                handLandmarkerHelper.minHandDetectionConfidence = detectionThreshold
+                handLandmarkerHelper.minHandTrackingConfidence = trackingThreshold
+                handLandmarkerHelper.currentDelegate = delegate
+                handLandmarkerHelper.clearHandLandmarker()
+                handLandmarkerHelper.setupHandLandmarker()
+            }
         }
     }
 
