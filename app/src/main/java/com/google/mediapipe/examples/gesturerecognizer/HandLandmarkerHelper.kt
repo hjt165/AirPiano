@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
@@ -32,22 +34,22 @@ class HandLandmarkerHelper(
                 .setModelAssetPath(currentModel)
 
             val delegate = if (currentDelegate == DELEGATE_GPU) {
-                BaseOptions.Delegate.GPU
+                Delegate.GPU
             } else {
-                BaseOptions.Delegate.CPU
+                Delegate.CPU
             }
             baseOptionsBuilder.setDelegate(delegate)
 
             val optionsBuilder = HandLandmarker.HandLandmarkerOptions.builder()
                 .setBaseOptions(baseOptionsBuilder.build())
                 .setMinHandDetectionConfidence(minHandDetectionConfidence)
-                .setMinHandTrackingConfidence(minHandTrackingConfidence)
+                .setMinTrackingConfidence(minHandTrackingConfidence)
                 .setMinHandPresenceConfidence(minHandPresenceConfidence)
                 .setNumHands(1)
 
             if (runningMode == RunningMode.LIVE_STREAM) {
                 optionsBuilder.setRunningMode(RunningMode.LIVE_STREAM)
-                optionsBuilder.setResultListener { result, inputImage ->
+                optionsBuilder.setResultListener { result: HandLandmarkerResult, inputImage: MPImage ->
                     val finishTimeMs = System.currentTimeMillis()
                     val latencyMs = finishTimeMs - result.timestampMs()
                     handLandmarkerListener?.onResults(
