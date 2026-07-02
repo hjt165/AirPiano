@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_piano"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="钢琴" />
+    <item
+        android:id="@+id/nav_history"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="历史" />
+</menu>

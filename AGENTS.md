@@ -7,12 +7,10 @@
 **Branch:** `main`
 **Package:** `com.google.mediapipe.examples.gesturerecognizer`
 
-## Build Commands
+## Roles
 
-```bash
-# From E:\AIR directory
-gradlew.bat assembleDebug
-```
+- **AI Agent (opencode):** Write code only. Do NOT run gradlew or build commands.
+- **User (hjt165):** Handle all compilation, building, and APK installation.
 
 ## Project Structure
 

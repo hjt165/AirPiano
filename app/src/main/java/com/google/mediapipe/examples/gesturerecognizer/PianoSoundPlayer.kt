@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.SoundPool
 import android.util.Log
+import com.google.mediapipe.examples.gesturerecognizer.model.NoteEvent
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
@@ -25,6 +26,11 @@ class PianoSoundPlayer(private val context: Context) {
     private val noteSoundIds = mutableMapOf<String, Int>()
     private val activeNotes = mutableSetOf<String>()
     private var isLoaded = false
+
+    // Recording state
+    private var isRecording = false
+    private val recordedEvents = mutableListOf<NoteEvent>()
+    private var recordingStartTime = 0L
 
     private val noteFrequencies = mapOf(
         "C4" to 261.63, "D4" to 293.66, "E4" to 329.63,
@@ -157,10 +163,14 @@ class PianoSoundPlayer(private val context: Context) {
         val soundId = noteSoundIds[noteName] ?: return
         soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
         activeNotes.add(noteName)
+        recordNoteEvent(noteName, "play")
     }
 
     fun stopNote(noteName: String) {
-        activeNotes.remove(noteName)
+        if (activeNotes.contains(noteName)) {
+            activeNotes.remove(noteName)
+            recordNoteEvent(noteName, "stop")
+        }
     }
 
     fun stopAllNotes() {
@@ -176,6 +186,34 @@ class PianoSoundPlayer(private val context: Context) {
     }
 
     fun isReady(): Boolean = isLoaded
+
+    // Recording methods
+    fun startRecording() {
+        recordedEvents.clear()
+        recordingStartTime = System.currentTimeMillis()
+        isRecording = true
+        Log.d(TAG, "Recording started")
+    }
+
+    fun stopRecording(): List<NoteEvent> {
+        isRecording = false
+        Log.d(TAG, "Recording stopped, ${recordedEvents.size} events")
+        return recordedEvents.toList()
+    }
+
+    fun isCurrentlyRecording(): Boolean = isRecording
+
+    fun getRecordedEvents(): List<NoteEvent> = recordedEvents.toList()
+
+    private fun recordNoteEvent(noteName: String, action: String) {
+        if (!isRecording) return
+        val event = NoteEvent(
+            noteName = noteName,
+            timestampMs = System.currentTimeMillis() - recordingStartTime,
+            action = action
+        )
+        recordedEvents.add(event)
+    }
 
     companion object {
         private const val TAG = "PianoSoundPlayer"

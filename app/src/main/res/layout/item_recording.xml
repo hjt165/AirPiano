@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="#1E1E1E"
+    android:layout_marginBottom="8dp"
+    android:gravity="center_vertical">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_recording_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="录音"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_recording_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0个音符 | 0秒"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_play"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="播放"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00BFA5" />
+
+    <Button
+        android:id="@+id/btn_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="删除"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#555555"
+        android:layout_marginStart="8dp" />
+
+</LinearLayout>
