@@ -306,7 +306,8 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             override fun onHighlightNote(note: String, startMs: Long, durationMs: Long) {
                 runOnUiThread {
                     val highlighted = teachModeManager.getHighlightedKeys()
-                    overlay.setTeachModeHighlight(highlighted, true)
+                    val nextNote = teachModeManager.getCurrentHighlightNote() ?: ""
+                    overlay.setTeachModeHighlight(highlighted, true, nextNote)
                     overlay.invalidate()
 
                     if (highlighted.isNotEmpty()) {
@@ -351,7 +352,8 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             override fun onMetronomeTick(expectedNoteIndex: Int) {
                 runOnUiThread {
                     val highlighted = teachModeManager.getHighlightedKeys()
-                    overlay.setTeachModeHighlight(highlighted, true)
+                    val nextNote = teachModeManager.getCurrentHighlightNote() ?: ""
+                    overlay.setTeachModeHighlight(highlighted, true, nextNote)
                     overlay.invalidate()
                 }
             }

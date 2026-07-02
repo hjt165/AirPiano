@@ -51,6 +51,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     private var highlightedBlackKeys: Set<Int> = emptySet()
     private var highlightPhase = 0f
     private var teachModeActive = false
+    private var nextNoteName: String = ""
 
     // Paints for piano
     private val whiteKeyNormalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -100,6 +101,20 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         color = Color.parseColor("#4CAF50")
         strokeWidth = 4f
         style = Paint.Style.STROKE
+    }
+
+    // Key label paints
+    private val whiteKeyLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#333333")
+        textAlign = Paint.Align.CENTER
+    }
+    private val blackKeyLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FFFFFF")
+        textAlign = Paint.Align.CENTER
+    }
+    private val nextNotePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FFEB3B")
+        textAlign = Paint.Align.CENTER
     }
 
     // Info text
@@ -264,6 +279,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     private fun drawPiano(canvas: Canvas) {
         if (whiteKeyRects.isEmpty()) return
 
+        val keyWidth = whiteKeyRects[0].width()
+        val keyHeight = whiteKeyRects[0].height()
+        val whiteTextSize = (keyWidth * 0.42f).coerceIn(12f, 28f)
+        val blackTextSize = (keyWidth * 0.34f).coerceIn(10f, 22f)
+        val highlightedTextSize = whiteTextSize * 1.2f
+
         // Draw white keys
         for (i in whiteKeyRects.indices) {
             val key = whiteKeyRects[i]
@@ -293,6 +314,25 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
             } else {
                 canvas.drawRect(key, keyBorderPaint)
             }
+
+            // Draw note label on white key
+            if (i < whiteKeyNotes.size) {
+                val noteName = whiteKeyNotes[i]
+                val isNext = teachModeActive && noteName == nextNoteName
+                val paint = if (isNext) {
+                    nextNotePaint.apply { textSize = highlightedTextSize }
+                } else if (isHighlighted) {
+                    whiteKeyLabelPaint.apply { textSize = highlightedTextSize; color = Color.parseColor("#FFFFFF") }
+                } else {
+                    whiteKeyLabelPaint.apply { textSize = whiteTextSize; color = Color.parseColor("#333333") }
+                }
+                canvas.save()
+                canvas.clipRect(key)
+                val textX = key.centerX()
+                val textY = key.bottom - 10f
+                canvas.drawText(noteName, textX, textY, paint)
+                canvas.restore()
+            }
         }
 
         // Draw black keys
@@ -318,6 +358,25 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                 canvas.drawRect(key, highlightBorderPaint)
             } else {
                 canvas.drawRect(key, keyBorderPaint)
+            }
+
+            // Draw note label on black key
+            if (i < blackKeyNotes.size) {
+                val noteName = blackKeyNotes[i]
+                val isNext = teachModeActive && noteName == nextNoteName
+                val paint = if (isNext) {
+                    nextNotePaint.apply { textSize = blackTextSize * 1.2f }
+                } else if (isHighlighted) {
+                    blackKeyLabelPaint.apply { textSize = blackTextSize * 1.1f; color = Color.parseColor("#FFEB3B") }
+                } else {
+                    blackKeyLabelPaint.apply { textSize = blackTextSize; color = Color.parseColor("#FFFFFF") }
+                }
+                canvas.save()
+                canvas.clipRect(key)
+                val textX = key.centerX()
+                val textY = key.bottom - 4f
+                canvas.drawText(noteName, textX, textY, paint)
+                canvas.restore()
             }
         }
     }
@@ -426,11 +485,13 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         currentNote = note
     }
 
-    fun setTeachModeHighlight(noteNames: List<String>, active: Boolean) {
+    fun setTeachModeHighlight(noteNames: List<String>, active: Boolean, nextNote: String = "") {
         teachModeActive = active
+        nextNoteName = nextNote
         if (!active) {
             highlightedWhiteKeys = emptySet()
             highlightedBlackKeys = emptySet()
+            nextNoteName = ""
             return
         }
 
