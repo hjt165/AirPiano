@@ -50,8 +50,15 @@ class TeachModeManager {
         override fun run() {
             if (!isPlaying || isPaused) return
             playbackElapsedMs = ((System.currentTimeMillis() - songStartTimeMs) * speedMultiplier).toLong() + pauseOffsetMs.toLong()
+            val oldIndex = currentNoteIndex
             updateNoteIndex()
             callback?.onProgressChanged(currentNoteIndex, getCurrentSong()?.notes?.size ?: 0, playbackElapsedMs)
+            // Trigger highlight update if note index changed
+            if (currentNoteIndex != oldIndex && currentNoteIndex < (currentSong?.notes?.size ?: 0)) {
+                val note = currentSong!!.notes[currentNoteIndex]
+                callback?.onHighlightNote(note.note, note.startMs, note.durationMs)
+                callback?.onMetronomeTick(currentNoteIndex)
+            }
             handler.postDelayed(this, 50)
         }
     }
@@ -206,6 +213,17 @@ class TeachModeManager {
                 playbackElapsedMs > note.startMs + TOLERANCE_MS -> scoreNote(currentNoteIndex, 0.5)
                 else -> scoreNote(currentNoteIndex, 0.5)
             }
+            // Trigger highlight update for next note
+            triggerHighlightUpdate()
+        }
+    }
+
+    private fun triggerHighlightUpdate() {
+        val song = currentSong ?: return
+        if (currentNoteIndex < song.notes.size) {
+            val note = song.notes[currentNoteIndex]
+            callback?.onHighlightNote(note.note, note.startMs, note.durationMs)
+            callback?.onMetronomeTick(currentNoteIndex)
         }
     }
 

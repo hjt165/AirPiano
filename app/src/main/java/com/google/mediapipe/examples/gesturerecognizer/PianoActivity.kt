@@ -67,6 +67,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
     private lateinit var teachModeManager: TeachModeManager
     private var isTeachMode = false
     private lateinit var teachPanel: LinearLayout
+    private lateinit var teachHintBar: LinearLayout
     private lateinit var teachScorePanel: LinearLayout
     private lateinit var tvTeachSongName: TextView
     private lateinit var tvTeachProgress: TextView
@@ -109,6 +110,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
 
         // Teach mode views
         teachPanel = findViewById(R.id.teach_panel)
+        teachHintBar = findViewById(R.id.teach_hint_bar)
         teachScorePanel = findViewById(R.id.teach_score_panel)
         tvTeachSongName = findViewById(R.id.tv_teach_song_name)
         tvTeachProgress = findViewById(R.id.tv_teach_progress)
@@ -244,6 +246,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         btnRecord.isEnabled = false
 
         teachPanel.visibility = View.VISIBLE
+        teachHintBar.visibility = View.VISIBLE
         teachScorePanel.visibility = View.GONE
 
         tvTeachSongName.text = song.name
@@ -284,6 +287,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         btnRecord.isEnabled = true
 
         teachPanel.visibility = View.GONE
+        teachHintBar.visibility = View.GONE
         teachScorePanel.visibility = View.GONE
 
         overlay.setTeachModeHighlight(emptyList(), false)
@@ -332,6 +336,8 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
                     overlay.setTeachModeHighlight(emptyList(), false)
                     overlay.invalidate()
 
+                    teachPanel.visibility = View.GONE
+                    teachHintBar.visibility = View.GONE
                     teachScorePanel.visibility = View.VISIBLE
                     findViewById<TextView>(R.id.tv_score_title).text = "演奏评分"
                     findViewById<TextView>(R.id.tv_score_result).text = rating
