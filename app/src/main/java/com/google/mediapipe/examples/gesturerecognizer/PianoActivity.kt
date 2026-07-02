@@ -66,17 +66,12 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
     private lateinit var songLibrary: SongLibrary
     private lateinit var teachModeManager: TeachModeManager
     private var isTeachMode = false
-    private lateinit var teachPanel: LinearLayout
-    private lateinit var teachHintBar: LinearLayout
+    private lateinit var teachArea: LinearLayout
     private lateinit var teachScorePanel: LinearLayout
     private lateinit var tvTeachSongName: TextView
     private lateinit var tvTeachProgress: TextView
     private lateinit var tvTeachNextNote: TextView
-    private lateinit var tvTeachSpeed: TextView
     private lateinit var seekbarTeachProgress: SeekBar
-
-    private val speeds = floatArrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f)
-    private var currentSpeedIndex = 2
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -109,16 +104,14 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         btnTeach = findViewById(R.id.btn_teach)
 
         // Teach mode views
-        teachPanel = findViewById(R.id.teach_panel)
-        teachHintBar = findViewById(R.id.teach_hint_bar)
+        teachArea = findViewById(R.id.teach_area)
         teachScorePanel = findViewById(R.id.teach_score_panel)
         tvTeachSongName = findViewById(R.id.tv_teach_song_name)
         tvTeachProgress = findViewById(R.id.tv_teach_progress)
         tvTeachNextNote = findViewById(R.id.tv_teach_next_note)
-        tvTeachSpeed = findViewById(R.id.tv_teach_speed)
         seekbarTeachProgress = findViewById(R.id.seekbar_teach_progress)
 
-        // Init teach mode components
+        // Init teach mode
         songLibrary = SongLibrary(this)
         teachModeManager = TeachModeManager()
         teachModeManager.callback = createTeachCallback()
@@ -163,6 +156,11 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             }
         }
 
+        // Skip button
+        findViewById<Button>(R.id.btn_skip).setOnClickListener {
+            teachModeManager.skipCurrentNote()
+        }
+
         val instruments = arrayOf("钢琴", "吉他", "合成器")
         val spinner = findViewById<Spinner>(R.id.spinner_instrument)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, instruments)
@@ -191,25 +189,6 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
 
         updateInfoText()
 
-        // Speed control buttons
-        findViewById<Button>(R.id.btn_speed_down).setOnClickListener {
-            if (currentSpeedIndex > 0) {
-                currentSpeedIndex--
-                updateSpeedDisplay()
-            }
-        }
-
-        findViewById<Button>(R.id.btn_speed_up).setOnClickListener {
-            if (currentSpeedIndex < speeds.size - 1) {
-                currentSpeedIndex++
-                updateSpeedDisplay()
-            }
-        }
-
-        findViewById<Button>(R.id.btn_score_close).setOnClickListener {
-            teachScorePanel.visibility = View.GONE
-        }
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) {
@@ -228,7 +207,6 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             return
         }
 
-        // Show song selection dialog
         val songNames = songs.map { "${it.name} (${it.artist})" }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("选择曲目")
@@ -245,8 +223,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         btnTeach.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
         btnRecord.isEnabled = false
 
-        teachPanel.visibility = View.VISIBLE
-        teachHintBar.visibility = View.VISIBLE
+        teachArea.visibility = View.VISIBLE
         teachScorePanel.visibility = View.GONE
 
         tvTeachSongName.text = song.name
@@ -255,26 +232,11 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         seekbarTeachProgress.max = song.notes.size
         seekbarTeachProgress.progress = 0
 
-        currentSpeedIndex = 2
-        updateSpeedDisplay()
-
         overlay.setOctave(currentOctave)
         overlay.setTeachModeHighlight(emptyList(), true)
 
         teachModeManager.setSong(song)
-        teachModeManager.setSpeed(speeds[currentSpeedIndex])
-
-        // Auto start after 2 second countdown
-        tvTeachNextNote.text = "3..."
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            tvTeachNextNote.text = "2..."
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                tvTeachNextNote.text = "1..."
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    teachModeManager.start()
-                }, 700)
-            }, 700)
-        }, 700)
+        teachModeManager.start()
     }
 
     private fun exitTeachMode() {
@@ -286,58 +248,44 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         btnTeach.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
         btnRecord.isEnabled = true
 
-        teachPanel.visibility = View.GONE
-        teachHintBar.visibility = View.GONE
+        teachArea.visibility = View.GONE
         teachScorePanel.visibility = View.GONE
 
         overlay.setTeachModeHighlight(emptyList(), false)
     }
 
-    private fun updateSpeedDisplay() {
-        tvTeachSpeed.text = "${speeds[currentSpeedIndex]}x"
-        teachModeManager.setSpeed(speeds[currentSpeedIndex])
-    }
-
     private fun createTeachCallback(): TeachModeManager.Callback {
         return object : TeachModeManager.Callback {
-            override fun onProgressChanged(currentNoteIndex: Int, totalNotes: Int, currentMs: Long) {
+            override fun onShowHint(noteName: String, index: Int, total: Int) {
                 runOnUiThread {
-                    tvTeachProgress.text = "$currentNoteIndex/$totalNotes"
-                    seekbarTeachProgress.progress = currentNoteIndex
+                    tvTeachNextNote.text = "请按 $noteName"
+                    tvTeachProgress.text = "$index/$total"
+                    seekbarTeachProgress.progress = index
                 }
             }
 
-            override fun onHighlightNote(note: String, startMs: Long, durationMs: Long) {
+            override fun onHighlightNote(noteName: String) {
                 runOnUiThread {
                     val highlighted = teachModeManager.getHighlightedKeys()
                     val nextNote = teachModeManager.getCurrentHighlightNote() ?: ""
                     overlay.setTeachModeHighlight(highlighted, true, nextNote)
                     overlay.invalidate()
-
-                    if (highlighted.isNotEmpty()) {
-                        tvTeachNextNote.text = "下一个: ${highlighted.joinToString(", ")}"
-                    }
                 }
             }
 
             override fun onNoteCompleted(index: Int, note: String, score: Double) {
                 runOnUiThread {
-                    val symbol = when {
-                        score >= 1.0 -> "✓"
-                        score > 0 -> "~"
-                        else -> "✗"
-                    }
+                    val symbol = if (score >= 1.0) "✓" else "跳过"
                     Log.d(TAG, "Note $index ($note): $symbol")
                 }
             }
 
-            override fun onSongCompleted(score: Float, rating: String, perfect: Int, good: Int, miss: Int) {
+            override fun onSongCompleted(score: Float, rating: String, perfect: Int, skip: Int) {
                 runOnUiThread {
                     overlay.setTeachModeHighlight(emptyList(), false)
                     overlay.invalidate()
 
-                    teachPanel.visibility = View.GONE
-                    teachHintBar.visibility = View.GONE
+                    teachArea.visibility = View.GONE
                     teachScorePanel.visibility = View.VISIBLE
                     findViewById<TextView>(R.id.tv_score_title).text = "演奏评分"
                     findViewById<TextView>(R.id.tv_score_result).text = rating
@@ -351,16 +299,19 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
                     )
                     findViewById<TextView>(R.id.tv_score_percentage).text = "${score.toInt()}%"
                     findViewById<TextView>(R.id.tv_score_details).text =
-                        "完美: $perfect | 良好: $good | 失误: $miss"
+                        "完美: $perfect | 跳过: $skip"
                 }
             }
 
-            override fun onMetronomeTick(expectedNoteIndex: Int) {
+            override fun onWrongNote() {
                 runOnUiThread {
-                    val highlighted = teachModeManager.getHighlightedKeys()
-                    val nextNote = teachModeManager.getCurrentHighlightNote() ?: ""
-                    overlay.setTeachModeHighlight(highlighted, true, nextNote)
-                    overlay.invalidate()
+                    tvTeachNextNote.text = "再试一次!"
+                    tvTeachNextNote.setTextColor(0xFFF44336.toInt())
+                    tvTeachNextNote.postDelayed({
+                        val note = teachModeManager.getCurrentHighlightNote() ?: ""
+                        tvTeachNextNote.text = "请按 $note"
+                        tvTeachNextNote.setTextColor(0xFFFFEB3B.toInt())
+                    }, 800)
                 }
             }
         }

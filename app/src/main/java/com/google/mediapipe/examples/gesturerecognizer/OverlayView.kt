@@ -185,9 +185,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         if (whiteKeyNotes.isEmpty()) generateNoteNames()
 
         val pianoWidth = width * 0.95f
-        val pianoHeight = height * 0.38f
+        val pianoHeight = height * 0.33f
         val pianoLeft = (width - pianoWidth) / 2f
-        val pianoTop = height * 0.22f
+        val pianoTop = height * 0.60f
         val numWhiteKeys = 14
         val keyWidth = pianoWidth / numWhiteKeys
 
@@ -382,17 +382,17 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     }
 
     private fun drawInfo(canvas: Canvas) {
-        infoPaint.textSize = 36f
-        val pianoBottom = if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom + 8f else 140f
+        infoPaint.textSize = 32f
+        val pianoBottom = if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom + 6f else height * 0.95f
         val line1 = "推理: ${inferenceTime}ms"
         val line2 = "音符: $currentNote"
         val bgLeft = 12f
-        val bgTop = pianoBottom - 4f
+        val bgTop = pianoBottom - 2f
         val bgRight = max(infoPaint.measureText(line1), infoPaint.measureText(line2)) + 32f
-        val bgBottom = pianoBottom + 44f
+        val bgBottom = pianoBottom + 36f
         canvas.drawRoundRect(bgLeft, bgTop, bgRight, bgBottom, 8f, 8f, infoBgPaint)
-        canvas.drawText(line1, 20f, pianoBottom + 16f, infoPaint)
-        canvas.drawText(line2, 20f, pianoBottom + 38f, infoPaint)
+        canvas.drawText(line1, 20f, pianoBottom + 14f, infoPaint)
+        canvas.drawText(line2, 20f, pianoBottom + 32f, infoPaint)
     }
 
     fun detectPressedKeys(result: HandLandmarkerResult) {

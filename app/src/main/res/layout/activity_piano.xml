@@ -6,80 +6,64 @@
     android:orientation="vertical"
     android:background="@android:color/black">
 
-    <!-- Camera + Overlay layer -->
-    <FrameLayout
+    <!-- Top bar: Back + Info + Settings -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#CC1E1E1E"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp">
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/view_finder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:scaleType="fillCenter" />
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@android:drawable/ic_menu_revert"
+            android:background="@android:color/transparent"
+            android:contentDescription="返回"
+            android:tint="#FFFFFF" />
 
-        <com.google.mediapipe.examples.gesturerecognizer.OverlayView
-            android:id="@+id/overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <!-- Top left: Back + Info -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/tv_info"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|start"
-            android:orientation="horizontal"
-            android:background="#88000000"
-            android:padding="8dp"
-            android:layout_margin="12dp"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:text="八度: 4"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:gravity="center" />
 
-            <ImageButton
-                android:id="@+id/btn_back"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@android:drawable/ic_menu_revert"
-                android:background="@android:color/transparent"
-                android:contentDescription="返回"
-                android:tint="#FFFFFF" />
-
-            <TextView
-                android:id="@+id/tv_info"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="八度: 4"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:layout_marginStart="8dp" />
-        </LinearLayout>
-
-        <!-- Top right: Settings -->
         <ImageButton
             android:id="@+id/btn_settings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="12dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:src="@android:drawable/ic_menu_manage"
             android:background="@drawable/bg_circle_dark"
             android:contentDescription="设置"
             android:tint="#FFFFFF"
-            android:padding="8dp" />
+            android:padding="6dp" />
+    </LinearLayout>
 
-        <!-- Teach mode overlay panel (compact horizontal bar at top) -->
+    <!-- Teach area (only visible in teach mode) -->
+    <LinearLayout
+        android:id="@+id/teach_area"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#CC1E1E1E"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone">
+
+        <!-- Row 1: Song name + Progress + Skip -->
         <LinearLayout
-            android:id="@+id/teach_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:layout_marginStart="56dp"
-            android:layout_marginEnd="56dp"
             android:orientation="horizontal"
-            android:background="#CC1E1E1E"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="3dp"
-            android:gravity="center_vertical"
-            android:visibility="gone">
+            android:gravity="center_vertical">
 
             <TextView
                 android:id="@+id/tv_teach_song_name"
@@ -87,7 +71,7 @@
                 android:layout_height="wrap_content"
                 android:text="小星星"
                 android:textColor="#4CAF50"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <SeekBar
@@ -109,60 +93,48 @@
                 android:textSize="11sp" />
 
             <Button
-                android:id="@+id/btn_speed_down"
-                android:layout_width="32dp"
-                android:layout_height="24dp"
-                android:text="-"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"
-                android:minHeight="0dp"
-                android:padding="0dp"
-                android:layout_marginStart="8dp"
-                android:backgroundTint="#555555" />
-
-            <TextView
-                android:id="@+id/tv_teach_speed"
-                android:layout_width="40dp"
-                android:layout_height="wrap_content"
-                android:text="1.0x"
-                android:textColor="#FFFFFF"
+                android:id="@+id/btn_skip"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:text="跳过"
                 android:textSize="11sp"
-                android:gravity="center" />
-
-            <Button
-                android:id="@+id/btn_speed_up"
-                android:layout_width="32dp"
-                android:layout_height="24dp"
-                android:text="+"
-                android:textSize="14sp"
                 android:textColor="#FFFFFF"
                 android:minHeight="0dp"
-                android:padding="0dp"
-                android:backgroundTint="#555555" />
+                android:paddingHorizontal="12dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#FF9800" />
         </LinearLayout>
 
-        <!-- Teach next note hint bar (below teach panel) -->
-        <LinearLayout
-            android:id="@+id/teach_hint_bar"
+        <!-- Row 2: Next note hint -->
+        <TextView
+            android:id="@+id/tv_teach_next_note"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:layout_marginTop="38dp"
-            android:orientation="horizontal"
-            android:background="#AA000000"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="2dp"
+            android:text="请按 C4"
+            android:textColor="#FFEB3B"
+            android:textSize="18sp"
+            android:textStyle="bold"
             android:gravity="center"
-            android:visibility="gone">
+            android:paddingTop="4dp"
+            android:paddingBottom="2dp" />
+    </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_teach_next_note"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="下一个: C4"
-                android:textColor="#FFEB3B"
-                android:textSize="12sp" />
-        </LinearLayout>
+    <!-- Camera + Overlay layer (fills remaining space) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/view_finder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:scaleType="fillCenter" />
+
+        <com.google.mediapipe.examples.gesturerecognizer.OverlayView
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
         <!-- Teach mode score panel (shown after completion) -->
         <LinearLayout
@@ -208,7 +180,7 @@
                 android:id="@+id/tv_score_details"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="完美: 40 | 良好: 2 | 失误: 0"
+                android:text="完美: 40 | 跳过: 2"
                 android:textColor="#AAAAAA"
                 android:textSize="13sp"
                 android:layout_marginTop="8dp" />
