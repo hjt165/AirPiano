@@ -5,8 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageButton
-import android.widget.RadioGroup
 import android.widget.TextView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
@@ -16,6 +14,7 @@ class SettingsDialogFragment : BottomSheetDialogFragment() {
     private var currentTrackingThreshold = 0.50f
     private var currentPressThreshold = 0.07f
     private var currentDelegate = 0
+    private var currentNumHands = 1
 
     private var listener: SettingsListener? = null
 
@@ -24,7 +23,8 @@ class SettingsDialogFragment : BottomSheetDialogFragment() {
             detectionThreshold: Float,
             trackingThreshold: Float,
             pressThreshold: Float,
-            delegate: Int
+            delegate: Int,
+            numHands: Int
         )
     }
 
@@ -36,12 +36,14 @@ class SettingsDialogFragment : BottomSheetDialogFragment() {
         detectionThreshold: Float,
         trackingThreshold: Float,
         pressThreshold: Float,
-        delegate: Int
+        delegate: Int,
+        numHands: Int = 1
     ) {
         currentDetectionThreshold = detectionThreshold
         currentTrackingThreshold = trackingThreshold
         currentPressThreshold = pressThreshold
         currentDelegate = delegate
+        currentNumHands = numHands
     }
 
     override fun onCreateView(
@@ -58,16 +60,55 @@ class SettingsDialogFragment : BottomSheetDialogFragment() {
         val tvDetectionValue = view.findViewById<TextView>(R.id.tv_detection_value)
         val tvTrackingValue = view.findViewById<TextView>(R.id.tv_tracking_value)
         val tvPressValue = view.findViewById<TextView>(R.id.tv_press_value)
-        val rgDelegate = view.findViewById<RadioGroup>(R.id.rg_delegate)
+
+        val btnCpu = view.findViewById<Button>(R.id.btn_cpu)
+        val btnGpu = view.findViewById<Button>(R.id.btn_gpu)
+        val btnHands1 = view.findViewById<Button>(R.id.btn_hands_1)
+        val btnHands2 = view.findViewById<Button>(R.id.btn_hands_2)
 
         tvDetectionValue.text = String.format("%.2f", currentDetectionThreshold)
         tvTrackingValue.text = String.format("%.2f", currentTrackingThreshold)
         tvPressValue.text = String.format("%.2f", currentPressThreshold)
 
-        if (currentDelegate == 0) {
-            rgDelegate.check(R.id.rb_cpu)
-        } else {
-            rgDelegate.check(R.id.rb_gpu)
+        fun updateDelegateButtons() {
+            if (currentDelegate == 0) {
+                btnCpu.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF00BFA5.toInt())
+                btnGpu.backgroundTintList = android.content.res.ColorStateList.valueOf(0x44FFFFFF)
+            } else {
+                btnCpu.backgroundTintList = android.content.res.ColorStateList.valueOf(0x44FFFFFF)
+                btnGpu.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF00BFA5.toInt())
+            }
+        }
+
+        fun updateHandsButtons() {
+            if (currentNumHands == 1) {
+                btnHands1.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF00BFA5.toInt())
+                btnHands2.backgroundTintList = android.content.res.ColorStateList.valueOf(0x44FFFFFF)
+            } else {
+                btnHands1.backgroundTintList = android.content.res.ColorStateList.valueOf(0x44FFFFFF)
+                btnHands2.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF00BFA5.toInt())
+            }
+        }
+
+        updateDelegateButtons()
+        updateHandsButtons()
+
+        btnCpu.setOnClickListener {
+            currentDelegate = 0
+            updateDelegateButtons()
+        }
+        btnGpu.setOnClickListener {
+            currentDelegate = 1
+            updateDelegateButtons()
+        }
+
+        btnHands1.setOnClickListener {
+            currentNumHands = 1
+            updateHandsButtons()
+        }
+        btnHands2.setOnClickListener {
+            currentNumHands = 2
+            updateHandsButtons()
         }
 
         setupThresholdControl(
@@ -97,24 +138,21 @@ class SettingsDialogFragment : BottomSheetDialogFragment() {
             max = 0.20f
         )
 
-        rgDelegate.setOnCheckedChangeListener { _, checkedId ->
-            currentDelegate = if (checkedId == R.id.rb_cpu) 0 else 1
-        }
-
         view.findViewById<Button>(R.id.btn_apply).setOnClickListener {
             listener?.onSettingsApplied(
                 currentDetectionThreshold,
                 currentTrackingThreshold,
                 currentPressThreshold,
-                currentDelegate
+                currentDelegate,
+                currentNumHands
             )
             dismiss()
         }
     }
 
     private fun setupThresholdControl(
-        minusBtn: ImageButton,
-        plusBtn: ImageButton,
+        minusBtn: Button,
+        plusBtn: Button,
         valueTv: TextView,
         getter: () -> Float,
         setter: (Float) -> Unit,

@@ -2,54 +2,94 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:padding="12dp"
     android:background="#1E1E1E"
-    android:layout_marginBottom="8dp"
-    android:gravity="center_vertical">
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/tv_recording_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="录音"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <TextView
+        android:id="@+id/tv_recording_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0个音符 | 0秒"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp" />
+
+    <SeekBar
+        android:id="@+id/seek_bar_progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:progress="0"
+        android:layout_marginBottom="8dp"
+        android:thumbTint="#00BFA5"
+        android:progressTint="#00BFA5"
+        android:progressBackgroundTint="#555555" />
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tv_recording_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="录音"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_recording_info"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0个音符 | 0秒"
-            android:textColor="#AAAAAA"
+        <Button
+            android:id="@+id/btn_play_pause"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="播放"
             android:textSize="12sp"
-            android:layout_marginTop="4dp" />
+            android:textColor="#FFFFFF"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:backgroundTint="#00BFA5" />
+
+        <Button
+            android:id="@+id/btn_stop"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="停止"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:layout_marginStart="6dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:backgroundTint="#555555"
+            android:enabled="false" />
+
+        <Button
+            android:id="@+id/btn_delete"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="删除"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:layout_marginStart="6dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:backgroundTint="#555555" />
+
     </LinearLayout>
-
-    <Button
-        android:id="@+id/btn_play"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:text="播放"
-        android:textSize="12sp"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#00BFA5" />
-
-    <Button
-        android:id="@+id/btn_delete"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:text="删除"
-        android:textSize="12sp"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#555555"
-        android:layout_marginStart="8dp" />
 
 </LinearLayout>

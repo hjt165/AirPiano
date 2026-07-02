@@ -19,6 +19,7 @@ class HandLandmarkerHelper(
     var minHandDetectionConfidence: Float = DEFAULT_HAND_DETECTION_CONFIDENCE,
     var minHandTrackingConfidence: Float = DEFAULT_HAND_TRACKING_CONFIDENCE,
     var minHandPresenceConfidence: Float = DEFAULT_HAND_PRESENCE_CONFIDENCE,
+    var numHands: Int = 1,
     val context: Context,
     val handLandmarkerListener: HandLandmarkerListener? = null
 ) {
@@ -46,7 +47,7 @@ class HandLandmarkerHelper(
                 .setMinHandDetectionConfidence(minHandDetectionConfidence)
                 .setMinTrackingConfidence(minHandTrackingConfidence)
                 .setMinHandPresenceConfidence(minHandPresenceConfidence)
-                .setNumHands(2)
+                .setNumHands(numHands)
 
             if (runningMode == RunningMode.LIVE_STREAM) {
                 optionsBuilder.setRunningMode(RunningMode.LIVE_STREAM)
@@ -83,6 +84,16 @@ class HandLandmarkerHelper(
             throw IllegalArgumentException(
                 "Attempting to call HandLandmarker while in the wrong running mode: $runningMode"
             )
+        }
+
+        if (handLandmarker == null) {
+            Log.w(TAG, "handLandmarker is null, attempting re-initialization")
+            setupHandLandmarker()
+        }
+
+        if (handLandmarker == null) {
+            Log.e(TAG, "handLandmarker still null after re-init, skipping frame")
+            return
         }
 
         val frameTimeMs = System.currentTimeMillis()

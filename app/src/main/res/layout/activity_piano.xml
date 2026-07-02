@@ -1,106 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@android:color/black">
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/view_finder"
+    <!-- Camera + Overlay layer -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:scaleType="fillCenter" />
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-    <com.google.mediapipe.examples.gesturerecognizer.OverlayView
-        android:id="@+id/overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <androidx.camera.view.PreviewView
+            android:id="@+id/view_finder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:scaleType="fillCenter" />
 
-    <!-- Top left: Back + Info -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        <com.google.mediapipe.examples.gesturerecognizer.OverlayView
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_revert"
-            android:background="@android:color/transparent"
-            android:contentDescription="返回"
-            android:tint="#AAAAAA" />
-
-        <TextView
-            android:id="@+id/tv_info"
+        <!-- Top left: Back + Info -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:text="八度: 3 | 推理: --ms"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginStart="12dp" />
-    </LinearLayout>
+            android:layout_gravity="top|start"
+            android:orientation="horizontal"
+            android:background="#88000000"
+            android:padding="8dp"
+            android:layout_margin="12dp"
+            android:gravity="center_vertical">
 
-    <!-- Top right: Settings -->
-    <ImageButton
-        android:id="@+id/btn_settings"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_gravity="top|end"
-        android:layout_margin="12dp"
-        android:src="@android:drawable/ic_menu_manage"
-        android:background="@android:color/transparent"
-        android:contentDescription="设置"
-        android:tint="#AAAAAA" />
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@android:drawable/ic_menu_revert"
+                android:background="@android:color/transparent"
+                android:contentDescription="返回"
+                android:tint="#FFFFFF" />
 
-    <!-- Bottom center: Controls -->
+            <TextView
+                android:id="@+id/tv_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="八度: 4"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+
+        <!-- Top right: Settings -->
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:src="@android:drawable/ic_menu_manage"
+            android:background="@drawable/bg_circle_dark"
+            android:contentDescription="设置"
+            android:tint="#FFFFFF"
+            android:padding="8dp" />
+
+    </FrameLayout>
+
+    <!-- Bottom controls bar -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center">
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="24dp"
+        android:gravity="center"
+        android:background="#CC1E1E1E">
 
         <Button
             android:id="@+id/btn_octave_down"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:text="八度-"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textColor="#FFFFFF"
+            android:minHeight="0dp"
             android:backgroundTint="#555555"
             android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/btn_octave_up"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:text="八度+"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textColor="#FFFFFF"
+            android:minHeight="0dp"
             android:backgroundTint="#555555"
-            android:layout_marginEnd="16dp" />
+            android:layout_marginEnd="12dp" />
 
         <Button
             android:id="@+id/btn_record"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:text="录制"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textColor="#FFFFFF"
+            android:minHeight="0dp"
             android:backgroundTint="#B00020" />
 
         <Spinner
             android:id="@+id/spinner_instrument"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginStart="16dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="12dp"
             android:background="#333333" />
 
     </LinearLayout>
 
-</FrameLayout>
+</LinearLayout>

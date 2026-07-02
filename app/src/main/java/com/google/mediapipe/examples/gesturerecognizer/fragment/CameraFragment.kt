@@ -140,7 +140,8 @@ class CameraFragment : Fragment(),
         detectionThreshold: Float,
         trackingThreshold: Float,
         pressThreshold: Float,
-        delegate: Int
+        delegate: Int,
+        numHands: Int
     ) {
         currentDetectionThreshold = detectionThreshold
         currentTrackingThreshold = trackingThreshold
@@ -152,6 +153,7 @@ class CameraFragment : Fragment(),
                 handLandmarkerHelper.minHandDetectionConfidence = detectionThreshold
                 handLandmarkerHelper.minHandTrackingConfidence = trackingThreshold
                 handLandmarkerHelper.currentDelegate = delegate
+                handLandmarkerHelper.numHands = numHands
                 handLandmarkerHelper.clearHandLandmarker()
                 handLandmarkerHelper.setupHandLandmarker()
             }

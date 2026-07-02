@@ -10,9 +10,9 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,12 +23,6 @@ import com.google.mediapipe.examples.gesturerecognizer.model.Recording
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import kotlin.math.sin
-import kotlin.math.exp
-import kotlin.random.Random
 
 class HistoryFragment : Fragment() {
 
@@ -45,7 +39,26 @@ class HistoryFragment : Fragment() {
     private var soundPool: SoundPool? = null
     private val noteSoundIds = mutableMapOf<String, Int>()
     private val handler = Handler(Looper.getMainLooper())
-    private var isPlaying = false
+
+    private var recordings: MutableList<Recording> = mutableListOf()
+
+    // Playback state
+    private var playingPosition = -1
+    private var isPaused = false
+    private var currentEventIndex = 0
+    private var pauseOffsetMs = 0L
+    private var playbackStartTimeMs = 0L
+    private var currentRecording: Recording? = null
+
+    private val progressUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (playingPosition < 0 || currentRecording == null) return
+            val elapsed = System.currentTimeMillis() - playbackStartTimeMs + pauseOffsetMs
+            val duration = currentRecording!!.duration.toInt().coerceAtLeast(1)
+            adapter.updateProgress(playingPosition, elapsed.toInt().coerceAtMost(duration))
+            handler.postDelayed(this, 100)
+        }
+    }
 
     private val noteFrequencies = mapOf(
         "C4" to 261.63, "D4" to 293.66, "E4" to 329.63,
@@ -76,15 +89,13 @@ class HistoryFragment : Fragment() {
         rvRecordings.layoutManager = LinearLayoutManager(requireContext())
 
         loadRecordings()
-
-        // Initialize SoundPool for playback
         initSoundPool()
     }
 
     private fun loadRecordings() {
         val json = prefs.getString(KEY_RECORDINGS, "[]")
         val type = object : TypeToken<MutableList<Recording>>() {}.type
-        val recordings: MutableList<Recording> = Gson().fromJson(json, type) ?: mutableListOf()
+        recordings = Gson().fromJson(json, type) ?: mutableListOf()
 
         if (recordings.isEmpty()) {
             tvEmpty.visibility = View.VISIBLE
@@ -95,8 +106,11 @@ class HistoryFragment : Fragment() {
 
             adapter = RecordingAdapter(
                 recordings,
-                onPlayClick = { recording -> playRecording(recording) },
-                onDeleteClick = { recording, position -> deleteRecording(recording, position) }
+                onPlayPauseClick = { recording, position -> togglePlayPause(recording, position) },
+                onStopClick = { _, position -> stopPlayback(position) },
+                onDeleteClick = { recording, position -> deleteRecording(recording, position) },
+                onRename = { recording, position, newName -> renameRecording(recording, position, newName) },
+                onSeekTo = { recording, position, seekMs -> seekTo(recording, position, seekMs) }
             )
             rvRecordings.adapter = adapter
         }
@@ -109,13 +123,13 @@ class HistoryFragment : Fragment() {
             .build()
 
         soundPool = SoundPool.Builder()
-            .setMaxStreams(4)
+            .setMaxStreams(8)
             .setAudioAttributes(audioAttributes)
             .build()
 
-        // Load sounds
-        for ((noteName, freq) in noteFrequencies) {
-            val wavFile = File(requireContext().cacheDir, "piano_notes_v2/note_${noteName}.wav")
+        val instrumentDir = File(requireContext().cacheDir, "piano_notes_v2/钢琴")
+        for ((noteName, _) in noteFrequencies) {
+            val wavFile = File(instrumentDir, "note_${noteName}.wav")
             if (wavFile.exists()) {
                 val soundId = soundPool?.load(wavFile.absolutePath, 1)
                 if (soundId != null) {
@@ -125,53 +139,177 @@ class HistoryFragment : Fragment() {
         }
     }
 
-    private fun playRecording(recording: Recording) {
-        if (isPlaying) {
-            Toast.makeText(requireContext(), "正在播放中...", Toast.LENGTH_SHORT).show()
-            return
+    private fun togglePlayPause(recording: Recording, position: Int) {
+        if (playingPosition == position) {
+            if (isPaused) {
+                resumePlayback()
+            } else {
+                pausePlayback()
+            }
+        } else {
+            startPlayback(recording, position)
         }
+    }
 
+    private fun startPlayback(recording: Recording, position: Int) {
         if (recording.noteEvents.isEmpty()) {
             Toast.makeText(requireContext(), "录音为空", Toast.LENGTH_SHORT).show()
             return
         }
 
-        isPlaying = true
-        Toast.makeText(requireContext(), "开始播放: ${recording.name}", Toast.LENGTH_SHORT).show()
+        stopAllPlayback()
 
-        // Play notes with original timing
-        for (event in recording.noteEvents) {
-            handler.postDelayed({
-                if (event.action == "play") {
-                    val soundId = noteSoundIds[event.noteName]
-                    if (soundId != null) {
-                        soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
+        playingPosition = position
+        currentRecording = recording
+        isPaused = false
+        currentEventIndex = 0
+        pauseOffsetMs = 0L
+        playbackStartTimeMs = System.currentTimeMillis()
+
+        adapter.setPlayingState(position, false)
+        handler.post(progressUpdateRunnable)
+        scheduleNextEvent()
+    }
+
+    private fun scheduleNextEvent() {
+        val recording = currentRecording ?: return
+        val events = recording.noteEvents
+
+        while (currentEventIndex < events.size) {
+            val event = events[currentEventIndex]
+            val delayMs = event.timestampMs - pauseOffsetMs - (System.currentTimeMillis() - playbackStartTimeMs)
+
+            if (delayMs <= 0) {
+                playEvent(event)
+                currentEventIndex++
+            } else {
+                handler.postDelayed({
+                    if (playingPosition >= 0 && !isPaused) {
+                        playEvent(event)
+                        currentEventIndex++
+                        scheduleNextEvent()
                     }
-                }
-            }, event.timestampMs)
+                }, delayMs)
+                return
+            }
         }
 
-        // Reset playing state after recording duration
-        val duration = if (recording.noteEvents.isNotEmpty()) recording.noteEvents.last().timestampMs + 500 else 0L
         handler.postDelayed({
-            isPlaying = false
+            stopAllPlayback()
             Toast.makeText(requireContext(), "播放完成", Toast.LENGTH_SHORT).show()
-        }, duration)
+        }, 300)
+    }
+
+    private fun playEvent(event: NoteEvent) {
+        if (event.action == "play") {
+            val soundId = noteSoundIds[event.noteName]
+            if (soundId != null) {
+                soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
+            }
+        }
+    }
+
+    private fun pausePlayback() {
+        isPaused = true
+        pauseOffsetMs = System.currentTimeMillis() - playbackStartTimeMs + pauseOffsetMs
+        handler.removeCallbacksAndMessages(null)
+        adapter.setPlayingState(playingPosition, true)
+    }
+
+    private fun resumePlayback() {
+        isPaused = false
+        playbackStartTimeMs = System.currentTimeMillis()
+        adapter.setPlayingState(playingPosition, false)
+        handler.post(progressUpdateRunnable)
+        scheduleNextEvent()
+    }
+
+    private fun stopPlayback(position: Int) {
+        if (playingPosition == position) {
+            stopAllPlayback()
+        }
+    }
+
+    private fun stopAllPlayback() {
+        handler.removeCallbacksAndMessages(null)
+        val oldPosition = playingPosition
+        playingPosition = -1
+        isPaused = false
+        currentEventIndex = 0
+        pauseOffsetMs = 0L
+        currentRecording = null
+        if (oldPosition >= 0 && ::adapter.isInitialized) {
+            adapter.stopPlayback()
+        }
+    }
+
+    private fun seekTo(recording: Recording, position: Int, seekMs: Int) {
+        if (playingPosition != position) return
+
+        handler.removeCallbacksAndMessages(null)
+
+        pauseOffsetMs = seekMs.toLong()
+        playbackStartTimeMs = System.currentTimeMillis()
+        currentEventIndex = 0
+
+        val events = recording.noteEvents
+        while (currentEventIndex < events.size && events[currentEventIndex].timestampMs <= seekMs) {
+            currentEventIndex++
+        }
+
+        if (!isPaused) {
+            handler.post(progressUpdateRunnable)
+            scheduleNextEvent()
+        }
+    }
+
+    private fun renameRecording(recording: Recording, position: Int, newName: String) {
+        recordings[position] = recording.copy(name = newName)
+        saveRecordings()
+        adapter.notifyItemChanged(position)
+    }
+
+    private fun saveRecordings() {
+        prefs.edit().putString(KEY_RECORDINGS, Gson().toJson(recordings)).apply()
     }
 
     private fun deleteRecording(recording: Recording, position: Int) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("确认删除")
+            .setMessage("确定要删除「${recording.name}」吗？")
+            .setPositiveButton("删除") { _, _ ->
+                performDelete(recording, position)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun performDelete(recording: Recording, position: Int) {
+        if (playingPosition == position) {
+            stopAllPlayback()
+        }
+
         val json = prefs.getString(KEY_RECORDINGS, "[]")
         val type = object : TypeToken<MutableList<Recording>>() {}.type
-        val recordings: MutableList<Recording> = Gson().fromJson(json, type) ?: mutableListOf()
+        val allRecordings: MutableList<Recording> = Gson().fromJson(json, type) ?: mutableListOf()
 
-        recordings.removeAll { it.id == recording.id }
-        prefs.edit().putString(KEY_RECORDINGS, Gson().toJson(recordings)).apply()
+        allRecordings.removeAll { it.id == recording.id }
+        prefs.edit().putString(KEY_RECORDINGS, Gson().toJson(allRecordings)).apply()
 
-        adapter.removeAt(position)
+        recordings.removeAt(position)
+        adapter.notifyItemRemoved(position)
+        adapter.notifyItemRangeChanged(position, recordings.size)
 
         if (recordings.isEmpty()) {
             tvEmpty.visibility = View.VISIBLE
             rvRecordings.visibility = View.GONE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (this::rvRecordings.isInitialized && playingPosition < 0) {
+            loadRecordings()
         }
     }
 

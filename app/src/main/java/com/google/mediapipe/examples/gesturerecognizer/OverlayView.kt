@@ -37,15 +37,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     // Piano overlay
     private var whiteKeyRects: List<RectF> = emptyList()
     private var blackKeyRects: List<RectF> = emptyList()
-    private val whiteKeyNotes = listOf(
-        "C4", "D4", "E4", "F4", "G4", "A4", "B4",
-        "C5", "D5", "E5", "F5", "G5", "A5", "B5"
-    )
-    private val blackKeyNotes = listOf(
-        "C#4", "D#4", "F#4", "G#4", "A#4",
-        "C#5", "D#5", "F#5", "G#5", "A#5"
-    )
+    private var whiteKeyNotes = listOf<String>()
+    private var blackKeyNotes = listOf<String>()
     private val hasBlackAfter = listOf(true, true, false, true, true, true, false)
+    private var currentOctave = 4
 
     private var pressedWhiteKeys: Set<Int> = emptySet()
     private var pressedBlackKeys: Set<Int> = emptySet()
@@ -75,8 +70,13 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     }
     private val infoPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 36f
-        setShadowLayer(4f, 2f, 2f, Color.BLACK)
+        textSize = 40f
+        setShadowLayer(6f, 3f, 3f, Color.BLACK)
+    }
+
+    private val infoBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#88000000")
+        style = Paint.Style.FILL
     }
 
     // Info text
@@ -114,13 +114,42 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         fingertipPaint.style = Paint.Style.FILL
     }
 
+    fun setOctave(octave: Int) {
+        currentOctave = octave
+        generateNoteNames()
+        calculatePianoLayout()
+        invalidate()
+    }
+
+    private fun generateNoteNames() {
+        val whiteNoteNames = listOf("C", "D", "E", "F", "G", "A", "B")
+        val blackNoteNames = listOf("C#", "D#", "F#", "G#", "A#")
+
+        val white = mutableListOf<String>()
+        val black = mutableListOf<String>()
+
+        for (oct in 0..1) {
+            val octNum = currentOctave + oct
+            for (name in whiteNoteNames) {
+                white.add("$name$octNum")
+            }
+            for (name in blackNoteNames) {
+                black.add("$name$octNum")
+            }
+        }
+
+        whiteKeyNotes = white
+        blackKeyNotes = black
+    }
+
     private fun calculatePianoLayout() {
         if (width == 0 || height == 0) return
+        if (whiteKeyNotes.isEmpty()) generateNoteNames()
 
         val pianoWidth = width * 0.95f
         val pianoHeight = height * 0.35f
         val pianoLeft = (width - pianoWidth) / 2f
-        val pianoTop = height * 0.10f  // Place piano at 10% from top
+        val pianoTop = height * 0.10f
         val numWhiteKeys = 14
         val keyWidth = pianoWidth / numWhiteKeys
 
@@ -247,10 +276,17 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     }
 
     private fun drawInfo(canvas: Canvas) {
-        infoPaint.textSize = 32f
-        val pianoBottom = if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom + 40f else 120f
-        canvas.drawText("推理时间: ${inferenceTime}ms", 20f, pianoBottom, infoPaint)
-        canvas.drawText("当前音符: $currentNote", 20f, pianoBottom + 40f, infoPaint)
+        infoPaint.textSize = 40f
+        val pianoBottom = if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom + 50f else 140f
+        val line1 = "推理时间: ${inferenceTime}ms"
+        val line2 = "当前音符: $currentNote"
+        val bgLeft = 12f
+        val bgTop = pianoBottom - 36f
+        val bgRight = max(infoPaint.measureText(line1), infoPaint.measureText(line2)) + 32f
+        val bgBottom = pianoBottom + 50f
+        canvas.drawRoundRect(bgLeft, bgTop, bgRight, bgBottom, 8f, 8f, infoBgPaint)
+        canvas.drawText(line1, 20f, pianoBottom, infoPaint)
+        canvas.drawText(line2, 20f, pianoBottom + 44f, infoPaint)
     }
 
     fun detectPressedKeys(result: HandLandmarkerResult) {
