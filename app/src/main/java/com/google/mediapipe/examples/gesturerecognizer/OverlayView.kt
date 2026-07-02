@@ -54,7 +54,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     // Paints for piano
     private val whiteKeyNormalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        alpha = 180
+        alpha = 110
         style = Paint.Style.FILL
     }
     private val whiteKeyPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -62,7 +62,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     }
     private val blackKeyNormalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
-        alpha = 180
+        alpha = 130
         style = Paint.Style.FILL
     }
     private val blackKeyPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -120,7 +120,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         val pianoWidth = width * 0.95f
         val pianoHeight = height * 0.35f
         val pianoLeft = (width - pianoWidth) / 2f
-        val pianoTop = height * 0.35f
+        val pianoTop = height * 0.10f  // Place piano at 10% from top
         val numWhiteKeys = 14
         val keyWidth = pianoWidth / numWhiteKeys
 
@@ -137,8 +137,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
             val scaleIndex = i % 7
             if (hasBlackAfter[scaleIndex]) {
                 val left = pianoLeft + (i + 1) * keyWidth - keyWidth * 0.35f
-                val blackWidth = keyWidth * 0.55f
-                val blackHeight = pianoHeight * 0.6f
+                val blackWidth = keyWidth * 0.70f
+                val blackHeight = pianoHeight * 0.65f
                 blackList.add(RectF(left, pianoTop, left + blackWidth, pianoTop + blackHeight))
                 blackIndex++
             }
@@ -248,8 +248,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
     private fun drawInfo(canvas: Canvas) {
         infoPaint.textSize = 32f
-        canvas.drawText("推理时间: ${inferenceTime}ms", 20f, 50f, infoPaint)
-        canvas.drawText("当前音符: $currentNote", 20f, 90f, infoPaint)
+        val pianoBottom = if (whiteKeyRects.isNotEmpty()) whiteKeyRects[0].bottom + 40f else 120f
+        canvas.drawText("推理时间: ${inferenceTime}ms", 20f, pianoBottom, infoPaint)
+        canvas.drawText("当前音符: $currentNote", 20f, pianoBottom + 40f, infoPaint)
     }
 
     fun detectPressedKeys(result: HandLandmarkerResult) {

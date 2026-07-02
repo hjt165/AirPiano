@@ -12,6 +12,12 @@ import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.sin
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.sqrt
+import kotlin.math.min
+import kotlin.math.max
+import kotlin.random.Random
 
 class PianoSoundPlayer(private val context: Context) {
 
@@ -32,7 +38,7 @@ class PianoSoundPlayer(private val context: Context) {
     )
 
     fun initialize() {
-        val cacheDir = File(context.cacheDir, "piano_notes")
+        val cacheDir = File(context.cacheDir, "piano_notes_v2")
         cacheDir.mkdirs()
 
         val audioAttributes = AudioAttributes.Builder()
@@ -41,7 +47,7 @@ class PianoSoundPlayer(private val context: Context) {
             .build()
 
         soundPool = SoundPool.Builder()
-            .setMaxStreams(8)
+            .setMaxStreams(12)
             .setAudioAttributes(audioAttributes)
             .build()
 
@@ -69,10 +75,12 @@ class PianoSoundPlayer(private val context: Context) {
     }
 
     private fun generatePianoWav(file: File, frequency: Double) {
-        val sampleRate = 22050
-        val duration = 1.5
-        val numSamples = (sampleRate * duration).toInt()
-        val amplitude = 12000.0
+        val sampleRate = 44100
+        // Duration varies by frequency: lower notes sustain longer
+        val duration = 3.0 - (frequency - 261.0) / 200.0  // ~3s for C4, ~1.5s for B5
+        val durationCapped = duration.coerceIn(1.5, 3.0)
+        val numSamples = (sampleRate * durationCapped).toInt()
+        val amplitude = 14000.0
 
         val dataSize = numSamples * 2
         val fileSize = 36 + dataSize
@@ -92,24 +100,47 @@ class PianoSoundPlayer(private val context: Context) {
         header.put("data".toByteArray())
         header.putInt(dataSize)
 
+        // Frequency-dependent brightness: lower notes = fewer high harmonics
+        val brightness = (frequency / 1000.0).coerceIn(0.5, 1.0)
+
         val data = ByteBuffer.allocate(dataSize).order(ByteOrder.LITTLE_ENDIAN)
         for (i in 0 until numSamples) {
             val t = i.toDouble() / sampleRate
 
+            // === Multi-stage piano envelope ===
             val envelope = when {
-                t < 0.005 -> t / 0.005
-                t < 0.1 -> 1.0 - 0.5 * ((t - 0.005) / 0.095)
-                t < duration * 0.7 -> 0.5
-                t < duration -> 0.5 * (1.0 - (t - duration * 0.7) / (duration * 0.3))
+                t < 0.002 -> t / 0.002  // Hammer attack: 2ms
+                t < 0.01 -> 1.0  // Brief peak hold
+                t < 0.08 -> 1.0 - 0.25 * ((t - 0.01) / 0.07)  // Quick initial decay
+                t < 0.4 -> 0.75 - 0.25 * ((t - 0.08) / 0.32)  // Mid decay
+                t < durationCapped -> 0.5 * exp(-(t - 0.4) * (1.5 + frequency / 300.0))  // Exponential tail
                 else -> 0.0
             }
 
-            val wave = sin(2.0 * Math.PI * frequency * t) * 1.0 +
-                    sin(2.0 * Math.PI * frequency * 2 * t) * 0.3 +
-                    sin(2.0 * Math.PI * frequency * 3 * t) * 0.15 +
-                    sin(2.0 * Math.PI * frequency * 4 * t) * 0.08
+            // === Time-varying harmonics (high harmonics decay faster) ===
+            val h1Decay = exp(-t * 1.2)       // Fundamental: slowest decay
+            val h2Decay = exp(-t * 1.8)       // 2nd harmonic
+            val h3Decay = exp(-t * 2.8)       // 3rd harmonic
+            val h4Decay = exp(-t * 4.0)       // 4th harmonic
+            val h5Decay = exp(-t * 5.5)       // 5th harmonic
+            val h6Decay = exp(-t * 7.5)       // 6th harmonic
 
-            val value = (wave * amplitude * envelope / 1.53).toInt()
+            // Inharmonicity: slight sharpness on upper partials (real piano strings)
+            val inharmonicShift = 1.003  // 0.3% sharp
+
+            val wave = sin(2.0 * Math.PI * frequency * t) * 1.0 * h1Decay +
+                    sin(2.0 * Math.PI * frequency * 2 * inharmonicShift * t) * 0.4 * h2Decay * brightness +
+                    sin(2.0 * Math.PI * frequency * 3 * inharmonicShift * t) * 0.2 * h3Decay * brightness +
+                    sin(2.0 * Math.PI * frequency * 4 * inharmonicShift * t) * 0.1 * h4Decay * brightness * brightness +
+                    sin(2.0 * Math.PI * frequency * 5 * inharmonicShift * t) * 0.05 * h5Decay * brightness * brightness +
+                    sin(2.0 * Math.PI * frequency * 6 * inharmonicShift * t) * 0.025 * h6Decay * brightness * brightness
+
+            // === Hammer strike noise (5ms burst at attack) ===
+            val hammerNoise = if (t < 0.005) {
+                (Random.nextFloat() * 2.0 - 1.0) * 0.3 * (1.0 - t / 0.005)
+            } else 0.0
+
+            val value = ((wave + hammerNoise) * amplitude * envelope / 1.775).toInt()
             data.putShort(value.coerceIn(-32768, 32767).toShort())
         }
 

@@ -46,7 +46,7 @@ class HandLandmarkerHelper(
                 .setMinHandDetectionConfidence(minHandDetectionConfidence)
                 .setMinTrackingConfidence(minHandTrackingConfidence)
                 .setMinHandPresenceConfidence(minHandPresenceConfidence)
-                .setNumHands(1)
+                .setNumHands(2)
 
             if (runningMode == RunningMode.LIVE_STREAM) {
                 optionsBuilder.setRunningMode(RunningMode.LIVE_STREAM)
@@ -95,25 +95,17 @@ class HandLandmarkerHelper(
         val image = imageProxy.image!!
         val plane = image.planes[0]
         val buffer = plane.buffer
+        val pixelStride = plane.pixelStride
         val rowStride = plane.rowStride
+        val rowPadding = rowStride - pixelStride * image.width
 
-        val bitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
-        val pixels = IntArray(image.width * image.height)
-        buffer.rewind()
-
-        for (row in 0 until image.height) {
-            buffer.position(row * rowStride)
-            for (col in 0 until image.width) {
-                val r = buffer.get().toInt() and 0xFF
-                val g = buffer.get().toInt() and 0xFF
-                val b = buffer.get().toInt() and 0xFF
-                val a = buffer.get().toInt() and 0xFF
-                pixels[row * image.width + col] = (a shl 24) or (r shl 16) or (g shl 8) or b
-            }
-        }
-
-        bitmap.setPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
-        return bitmap
+        val bitmap = Bitmap.createBitmap(
+            image.width + rowPadding / pixelStride,
+            image.height,
+            Bitmap.Config.ARGB_8888
+        )
+        bitmap.copyPixelsFromBuffer(buffer)
+        return Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
     }
 
     fun isClosed(): Boolean = handLandmarker == null

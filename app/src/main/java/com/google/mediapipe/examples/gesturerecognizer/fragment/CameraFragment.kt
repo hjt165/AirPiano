@@ -257,9 +257,11 @@ class CameraFragment : Fragment(),
             }
         }
 
-        // Play newly pressed notes
+        // Only play NEWLY pressed notes (not already in lastActiveNotes)
         for (note in currentNotes) {
-            pianoSoundPlayer.playNote(note)
+            if (note !in lastActiveNotes) {
+                pianoSoundPlayer.playNote(note)
+            }
         }
 
         lastActiveNotes = currentNotes
