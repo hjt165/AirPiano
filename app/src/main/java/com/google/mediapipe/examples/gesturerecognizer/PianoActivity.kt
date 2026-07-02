@@ -2,6 +2,7 @@ package com.google.mediapipe.examples.gesturerecognizer
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -12,6 +13,8 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -21,6 +24,8 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.google.mediapipe.examples.gesturerecognizer.model.Recording
+import com.google.mediapipe.examples.gesturerecognizer.teach.SongLibrary
+import com.google.mediapipe.examples.gesturerecognizer.teach.TeachModeManager
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -42,6 +47,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
     private lateinit var overlay: OverlayView
     private lateinit var tvInfo: TextView
     private lateinit var btnRecord: Button
+    private lateinit var btnTeach: Button
 
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
@@ -55,6 +61,21 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
     private var isRecording = false
 
     private lateinit var prefs: SharedPreferences
+
+    // Teach mode
+    private lateinit var songLibrary: SongLibrary
+    private lateinit var teachModeManager: TeachModeManager
+    private var isTeachMode = false
+    private lateinit var teachPanel: LinearLayout
+    private lateinit var teachScorePanel: LinearLayout
+    private lateinit var tvTeachSongName: TextView
+    private lateinit var tvTeachProgress: TextView
+    private lateinit var tvTeachNextNote: TextView
+    private lateinit var tvTeachSpeed: TextView
+    private lateinit var seekbarTeachProgress: SeekBar
+
+    private val speeds = floatArrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f)
+    private var currentSpeedIndex = 2
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -84,9 +105,28 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         overlay = findViewById(R.id.overlay)
         tvInfo = findViewById(R.id.tv_info)
         btnRecord = findViewById(R.id.btn_record)
+        btnTeach = findViewById(R.id.btn_teach)
+
+        // Teach mode views
+        teachPanel = findViewById(R.id.teach_panel)
+        teachScorePanel = findViewById(R.id.teach_score_panel)
+        tvTeachSongName = findViewById(R.id.tv_teach_song_name)
+        tvTeachProgress = findViewById(R.id.tv_teach_progress)
+        tvTeachNextNote = findViewById(R.id.tv_teach_next_note)
+        tvTeachSpeed = findViewById(R.id.tv_teach_speed)
+        seekbarTeachProgress = findViewById(R.id.seekbar_teach_progress)
+
+        // Init teach mode components
+        songLibrary = SongLibrary(this)
+        teachModeManager = TeachModeManager()
+        teachModeManager.callback = createTeachCallback()
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
-            finish()
+            if (isTeachMode) {
+                exitTeachMode()
+            } else {
+                finish()
+            }
         }
 
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
@@ -111,6 +151,14 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
 
         btnRecord.setOnClickListener {
             toggleRecording()
+        }
+
+        btnTeach.setOnClickListener {
+            if (isTeachMode) {
+                exitTeachMode()
+            } else {
+                enterTeachMode()
+            }
         }
 
         val instruments = arrayOf("钢琴", "吉他", "合成器")
@@ -141,6 +189,25 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
 
         updateInfoText()
 
+        // Speed control buttons
+        findViewById<Button>(R.id.btn_speed_down).setOnClickListener {
+            if (currentSpeedIndex > 0) {
+                currentSpeedIndex--
+                updateSpeedDisplay()
+            }
+        }
+
+        findViewById<Button>(R.id.btn_speed_up).setOnClickListener {
+            if (currentSpeedIndex < speeds.size - 1) {
+                currentSpeedIndex++
+                updateSpeedDisplay()
+            }
+        }
+
+        findViewById<Button>(R.id.btn_score_close).setOnClickListener {
+            teachScorePanel.visibility = View.GONE
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) {
@@ -149,6 +216,145 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             }
         } else {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun enterTeachMode() {
+        val songs = songLibrary.loadAllSongs()
+        if (songs.isEmpty()) {
+            Toast.makeText(this, "暂无曲目", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Show song selection dialog
+        val songNames = songs.map { "${it.name} (${it.artist})" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("选择曲目")
+            .setItems(songNames) { _, which ->
+                startTeachMode(songs[which])
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun startTeachMode(song: com.google.mediapipe.examples.gesturerecognizer.model.Song) {
+        isTeachMode = true
+        btnTeach.text = "退出教学"
+        btnTeach.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+        btnRecord.isEnabled = false
+
+        teachPanel.visibility = View.VISIBLE
+        teachScorePanel.visibility = View.GONE
+
+        tvTeachSongName.text = song.name
+        tvTeachProgress.text = "0/${song.notes.size}"
+        tvTeachNextNote.text = "准备开始..."
+        seekbarTeachProgress.max = song.notes.size
+        seekbarTeachProgress.progress = 0
+
+        currentSpeedIndex = 2
+        updateSpeedDisplay()
+
+        overlay.setOctave(currentOctave)
+        overlay.setTeachModeHighlight(emptyList(), true)
+
+        teachModeManager.setSong(song)
+        teachModeManager.setSpeed(speeds[currentSpeedIndex])
+
+        // Auto start after 2 second countdown
+        tvTeachNextNote.text = "3..."
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            tvTeachNextNote.text = "2..."
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                tvTeachNextNote.text = "1..."
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    teachModeManager.start()
+                }, 700)
+            }, 700)
+        }, 700)
+    }
+
+    private fun exitTeachMode() {
+        isTeachMode = false
+        teachModeManager.stop()
+        teachModeManager.reset()
+
+        btnTeach.text = "教学"
+        btnTeach.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+        btnRecord.isEnabled = true
+
+        teachPanel.visibility = View.GONE
+        teachScorePanel.visibility = View.GONE
+
+        overlay.setTeachModeHighlight(emptyList(), false)
+    }
+
+    private fun updateSpeedDisplay() {
+        tvTeachSpeed.text = "${speeds[currentSpeedIndex]}x"
+        teachModeManager.setSpeed(speeds[currentSpeedIndex])
+    }
+
+    private fun createTeachCallback(): TeachModeManager.Callback {
+        return object : TeachModeManager.Callback {
+            override fun onProgressChanged(currentNoteIndex: Int, totalNotes: Int, currentMs: Long) {
+                runOnUiThread {
+                    tvTeachProgress.text = "$currentNoteIndex/$totalNotes"
+                    seekbarTeachProgress.progress = currentNoteIndex
+                }
+            }
+
+            override fun onHighlightNote(note: String, startMs: Long, durationMs: Long) {
+                runOnUiThread {
+                    val highlighted = teachModeManager.getHighlightedKeys()
+                    overlay.setTeachModeHighlight(highlighted, true)
+                    overlay.invalidate()
+
+                    if (highlighted.isNotEmpty()) {
+                        tvTeachNextNote.text = "下一个: ${highlighted.joinToString(", ")}"
+                    }
+                }
+            }
+
+            override fun onNoteCompleted(index: Int, note: String, score: Double) {
+                runOnUiThread {
+                    val symbol = when {
+                        score >= 1.0 -> "✓"
+                        score > 0 -> "~"
+                        else -> "✗"
+                    }
+                    Log.d(TAG, "Note $index ($note): $symbol")
+                }
+            }
+
+            override fun onSongCompleted(score: Float, rating: String, perfect: Int, good: Int, miss: Int) {
+                runOnUiThread {
+                    overlay.setTeachModeHighlight(emptyList(), false)
+                    overlay.invalidate()
+
+                    teachScorePanel.visibility = View.VISIBLE
+                    findViewById<TextView>(R.id.tv_score_title).text = "演奏评分"
+                    findViewById<TextView>(R.id.tv_score_result).text = rating
+                    findViewById<TextView>(R.id.tv_score_result).setTextColor(
+                        when (rating) {
+                            "优秀" -> 0xFF4CAF50.toInt()
+                            "良好" -> 0xFF2196F3.toInt()
+                            "及格" -> 0xFFFF9800.toInt()
+                            else -> 0xFFF44336.toInt()
+                        }
+                    )
+                    findViewById<TextView>(R.id.tv_score_percentage).text = "${score.toInt()}%"
+                    findViewById<TextView>(R.id.tv_score_details).text =
+                        "完美: $perfect | 良好: $good | 失误: $miss"
+                }
+            }
+
+            override fun onMetronomeTick(expectedNoteIndex: Int) {
+                runOnUiThread {
+                    val highlighted = teachModeManager.getHighlightedKeys()
+                    overlay.setTeachModeHighlight(highlighted, true)
+                    overlay.invalidate()
+                }
+            }
         }
     }
 
@@ -293,12 +499,18 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         for (note in lastActiveNotes) {
             if (note !in currentNotes) {
                 pianoSoundPlayer.stopNote(note)
+                if (isTeachMode) {
+                    teachModeManager.onNoteReleased(note)
+                }
             }
         }
 
         for (note in currentNotes) {
             if (note !in lastActiveNotes) {
                 pianoSoundPlayer.playNote(note)
+                if (isTeachMode) {
+                    teachModeManager.onNotePressed(note)
+                }
             }
         }
 
@@ -342,10 +554,16 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
         if (isRecording) {
             toggleRecording()
         }
+        if (isTeachMode) {
+            teachModeManager.pause()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        if (this::teachModeManager.isInitialized) {
+            teachModeManager.stop()
+        }
         if (this::pianoSoundPlayer.isInitialized) {
             pianoSoundPlayer.release()
         }

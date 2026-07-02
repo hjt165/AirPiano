@@ -46,6 +46,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     private var pressedBlackKeys: Set<Int> = emptySet()
     private var pressedNotes: List<String> = emptyList()
 
+    // Teach mode highlight
+    private var highlightedWhiteKeys: Set<Int> = emptySet()
+    private var highlightedBlackKeys: Set<Int> = emptySet()
+    private var highlightPhase = 0f
+    private var teachModeActive = false
+
     // Paints for piano
     private val whiteKeyNormalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -77,6 +83,23 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     private val infoBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#88000000")
         style = Paint.Style.FILL
+    }
+
+    // Teach mode paints
+    private val highlightWhiteKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#4CAF50")
+        alpha = 140
+        style = Paint.Style.FILL
+    }
+    private val highlightBlackKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#4CAF50")
+        alpha = 180
+        style = Paint.Style.FILL
+    }
+    private val highlightBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#4CAF50")
+        strokeWidth = 4f
+        style = Paint.Style.STROKE
     }
 
     // Info text
@@ -245,33 +268,57 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         for (i in whiteKeyRects.indices) {
             val key = whiteKeyRects[i]
             val isPressed = pressedWhiteKeys.contains(i)
+            val isHighlighted = teachModeActive && highlightedWhiteKeys.contains(i)
 
-            if (isPressed) {
-                whiteKeyPressedPaint.shader = LinearGradient(
-                    key.left, key.top, key.left, key.bottom,
-                    Color.parseColor("#00BFA5"),
-                    Color.parseColor("#00897B"),
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRect(key, whiteKeyPressedPaint)
-            } else {
-                canvas.drawRect(key, whiteKeyNormalPaint)
+            when {
+                isPressed -> {
+                    whiteKeyPressedPaint.shader = LinearGradient(
+                        key.left, key.top, key.left, key.bottom,
+                        Color.parseColor("#00BFA5"),
+                        Color.parseColor("#00897B"),
+                        Shader.TileMode.CLAMP
+                    )
+                    canvas.drawRect(key, whiteKeyPressedPaint)
+                }
+                isHighlighted -> {
+                    canvas.drawRect(key, highlightWhiteKeyPaint)
+                }
+                else -> {
+                    canvas.drawRect(key, whiteKeyNormalPaint)
+                }
             }
-            canvas.drawRect(key, keyBorderPaint)
+
+            if (isHighlighted) {
+                canvas.drawRect(key, highlightBorderPaint)
+            } else {
+                canvas.drawRect(key, keyBorderPaint)
+            }
         }
 
         // Draw black keys
         for (i in blackKeyRects.indices) {
             val key = blackKeyRects[i]
             val isPressed = pressedBlackKeys.contains(i)
+            val isHighlighted = teachModeActive && highlightedBlackKeys.contains(i)
 
-            if (isPressed) {
-                blackKeyPressedPaint.color = Color.parseColor("#00BFA5")
-                canvas.drawRect(key, blackKeyPressedPaint)
-            } else {
-                canvas.drawRect(key, blackKeyNormalPaint)
+            when {
+                isPressed -> {
+                    blackKeyPressedPaint.color = Color.parseColor("#00BFA5")
+                    canvas.drawRect(key, blackKeyPressedPaint)
+                }
+                isHighlighted -> {
+                    canvas.drawRect(key, highlightBlackKeyPaint)
+                }
+                else -> {
+                    canvas.drawRect(key, blackKeyNormalPaint)
+                }
             }
-            canvas.drawRect(key, keyBorderPaint)
+
+            if (isHighlighted) {
+                canvas.drawRect(key, highlightBorderPaint)
+            } else {
+                canvas.drawRect(key, keyBorderPaint)
+            }
         }
     }
 
@@ -377,6 +424,33 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
     fun setCurrentNote(note: String) {
         currentNote = note
+    }
+
+    fun setTeachModeHighlight(noteNames: List<String>, active: Boolean) {
+        teachModeActive = active
+        if (!active) {
+            highlightedWhiteKeys = emptySet()
+            highlightedBlackKeys = emptySet()
+            return
+        }
+
+        val newWhite = mutableSetOf<Int>()
+        val newBlack = mutableSetOf<Int>()
+
+        for (noteName in noteNames) {
+            val whiteIdx = whiteKeyNotes.indexOf(noteName)
+            if (whiteIdx >= 0) {
+                newWhite.add(whiteIdx)
+                continue
+            }
+            val blackIdx = blackKeyNotes.indexOf(noteName)
+            if (blackIdx >= 0) {
+                newBlack.add(blackIdx)
+            }
+        }
+
+        highlightedWhiteKeys = newWhite
+        highlightedBlackKeys = newBlack
     }
 
     fun getPressedNotes(): List<String> = pressedNotes

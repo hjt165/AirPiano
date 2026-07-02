@@ -66,6 +66,166 @@
             android:tint="#FFFFFF"
             android:padding="8dp" />
 
+        <!-- Teach mode overlay panel (top center) -->
+        <LinearLayout
+            android:id="@+id/teach_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:background="#CC1E1E1E"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <!-- Song name + progress -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_teach_song_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="小星星"
+                    android:textColor="#4CAF50"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_teach_progress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0/42"
+                    android:textColor="#AAAAAA"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- SeekBar progress -->
+            <SeekBar
+                android:id="@+id/seekbar_teach_progress"
+                android:layout_width="220dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:max="100"
+                android:progressTint="#4CAF50"
+                android:thumbTint="#4CAF50" />
+
+            <!-- Next note hint -->
+            <TextView
+                android:id="@+id/tv_teach_next_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="下一个: C4"
+                android:textColor="#FFEB3B"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"
+                android:gravity="center" />
+
+            <!-- Speed control -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="6dp">
+
+                <Button
+                    android:id="@+id/btn_speed_down"
+                    android:layout_width="40dp"
+                    android:layout_height="32dp"
+                    android:text="-"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:backgroundTint="#555555" />
+
+                <TextView
+                    android:id="@+id/tv_teach_speed"
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:text="1.0x"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:gravity="center" />
+
+                <Button
+                    android:id="@+id/btn_speed_up"
+                    android:layout_width="40dp"
+                    android:layout_height="32dp"
+                    android:text="+"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:backgroundTint="#555555" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Teach mode score panel (shown after completion) -->
+        <LinearLayout
+            android:id="@+id/teach_score_panel"
+            android:layout_width="240dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:background="#DD1E1E1E"
+            android:padding="20dp"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_score_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="演奏评分"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_score_result"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="优秀"
+                android:textColor="#4CAF50"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/tv_score_percentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="95%"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/tv_score_details"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="完美: 40 | 良好: 2 | 失误: 0"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp"
+                android:layout_marginTop="8dp" />
+
+            <Button
+                android:id="@+id/btn_score_close"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="确定"
+                android:textColor="#FFFFFF"
+                android:minHeight="0dp"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="#4CAF50" />
+        </LinearLayout>
+
     </FrameLayout>
 
     <!-- Bottom controls bar -->
@@ -73,49 +233,60 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="24dp"
+        android:paddingHorizontal="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="20dp"
         android:gravity="center"
         android:background="#CC1E1E1E">
 
         <Button
             android:id="@+id/btn_octave_down"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="36dp"
             android:text="八度-"
-            android:textSize="13sp"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:minHeight="0dp"
+            android:backgroundTint="#555555"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btn_octave_up"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="八度+"
+            android:textSize="12sp"
             android:textColor="#FFFFFF"
             android:minHeight="0dp"
             android:backgroundTint="#555555"
             android:layout_marginEnd="8dp" />
 
         <Button
-            android:id="@+id/btn_octave_up"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="八度+"
-            android:textSize="13sp"
-            android:textColor="#FFFFFF"
-            android:minHeight="0dp"
-            android:backgroundTint="#555555"
-            android:layout_marginEnd="12dp" />
-
-        <Button
             android:id="@+id/btn_record"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="36dp"
             android:text="录制"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textColor="#FFFFFF"
             android:minHeight="0dp"
-            android:backgroundTint="#B00020" />
+            android:backgroundTint="#B00020"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btn_teach"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="教学"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:minHeight="0dp"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginEnd="8dp" />
 
         <Spinner
             android:id="@+id/spinner_instrument"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginStart="12dp"
+            android:layout_height="36dp"
             android:background="#333333" />
 
     </LinearLayout>
