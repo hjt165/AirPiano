@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
@@ -213,7 +214,7 @@ class PianoActivity : AppCompatActivity(), HandLandmarkerHelper.HandLandmarkerLi
             camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
             preview?.setSurfaceProvider(findViewById<androidx.camera.view.PreviewView>(R.id.view_finder).surfaceProvider)
         } catch (e: Exception) {
-            e(TAG, "Camera binding failed", e)
+            Log.e(TAG, "Camera binding failed", e)
         }
     }
 
